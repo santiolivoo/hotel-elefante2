@@ -165,11 +165,28 @@ Tu aplicación ahora está conectada a Supabase. Los beneficios incluyen:
 ✅ Storage para archivos (opcional)
 ✅ Plan gratuito generoso
 
+## 📦 Paso 7: Configurar Supabase Storage para Imágenes (IMPORTANTE)
+
+**⚠️ REQUERIDO para producción en Vercel**
+
+Las imágenes funcionan en localhost pero **NO** en Vercel porque Vercel usa un filesystem efímero. 
+
+👉 **Sigue la guía completa**: [CONFIGURAR_SUPABASE_STORAGE.md](./CONFIGURAR_SUPABASE_STORAGE.md)
+
+**Resumen rápido:**
+1. Crea un bucket `hotel-images` en Supabase Storage (público)
+2. Configura las variables de entorno:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+3. Configura políticas de acceso (RLS) para el bucket
+4. Re-deploya en Vercel
+
 ## 📚 Recursos Adicionales
 
 - [Documentación de Supabase](https://supabase.com/docs)
 - [Documentación de Prisma](https://www.prisma.io/docs)
 - [Guía de Prisma con Supabase](https://supabase.com/docs/guides/integrations/prisma)
+- [Supabase Storage](https://supabase.com/docs/guides/storage)
 
 ---
 
