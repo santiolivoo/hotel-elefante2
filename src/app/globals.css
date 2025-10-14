@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Nueva paleta Hotel Elefante */
+    /* #0B0A07 - Smoky Black, #BBCEA8 - Celadon, #E3D87E - Flax, #F0EC57 - Icterine, #748067 - Reseda Green */
+    
+    --background: 0 0% 100%;
+    --foreground: 45 22% 4%;  /* #0B0A07 - Smoky black para texto */
+    --card: 0 0% 100%;
+    --card-foreground: 45 22% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 45 22% 4%;
+    
+    --primary: 53 63% 58%;  /* #E3D87E - Flax más oscuro (amarillo dorado) */
+    --primary-foreground: 45 22% 4%;  /* Texto oscuro sobre primary */
+    
+    --secondary: 90 29% 73%;  /* #BBCEA8 - Celadon (verde claro) */
+    --secondary-foreground: 45 22% 4%;
+    
+    --accent: 58 84% 64%;  /* #F0EC57 - Icterine (amarillo brillante) */
+    --accent-foreground: 45 22% 4%;
+    
+    --muted: 90 29% 86%;  /* Celadon más claro */
+    --muted-foreground: 89 11% 35%;  /* Verde oscuro más claro */
+    
+    --destructive: 0 72% 51%;  /* Rojo para errores/cancelaciones */
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 90 20% 82%;  /* Verde claro suave */
+    --input: 90 20% 82%;
+    --ring: 53 63% 69%;  /* Primary color para focus */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 45 22% 4%;  /* #0B0A07 - Smoky black */
+    --foreground: 90 29% 86%;  /* Celadon claro para texto */
+    --card: 45 22% 8%;
+    --card-foreground: 90 29% 86%;
+    --popover: 45 22% 8%;
+    --popover-foreground: 90 29% 86%;
+    
+    --primary: 53 63% 58%;  /* #E3D87E - Flax más oscuro */
+    --primary-foreground: 45 22% 4%;
+    
+    --secondary: 89 11% 45%;  /* #748067 - Reseda green */
+    --secondary-foreground: 90 29% 86%;
+    
+    --accent: 58 84% 64%;  /* #F0EC57 - Icterine */
+    --accent-foreground: 45 22% 4%;
+    
+    --muted: 89 11% 25%;
+    --muted-foreground: 90 29% 73%;
+    
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 89 11% 25%;
+    --input: 89 11% 25%;
+    --ring: 53 63% 69%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Hotel specific styles */
+.hero-gradient {
+  background: linear-gradient(135deg, #D4C56D 0%, #748067 100%);
+}
+
+.glass-effect {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Leaflet map styles */
+.leaflet-container {
+  height: 400px;
+  width: 100%;
+  border-radius: 0.5rem;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #BBCEA8;  /* Celadon claro */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #748067;  /* Reseda green */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #D4C56D;  /* Flax más oscuro */
+}
+
+/* Animation utilities */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

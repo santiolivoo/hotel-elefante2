@@ -1,0 +1,114 @@
+// Usar exactamente este schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  passwordHash  String
+  name          String
+  role          String        @default("USER")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  operatorInfo  Operator?
+  reservations  Reservation[]
+}
+
+model Operator {
+  id     String  @id @default(cuid())
+  userId String  @unique
+  phone  String?
+  active Boolean @default(true)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RoomType {
+  id               Int      @id @default(autoincrement())
+  name             String
+  shortDescription String?
+  description      String?
+  basePrice        Decimal
+  maxGuests        Int
+  size             String?
+  bedType          String?
+  imageUrl         String?
+  images           String?
+  rooms            Room[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Room {
+  id           Int           @id @default(autoincrement())
+  number       String        @unique
+  floor        Int
+  roomTypeId   Int
+  status       String        @default("AVAILABLE")
+  description  String?
+  images       String?
+  roomType     RoomType      @relation(fields: [roomTypeId], references: [id])
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Reservation {
+  id          String    @id @default(cuid())
+  roomId      Int
+  userId      String
+  checkIn     DateTime
+  checkOut    DateTime
+  guests      Int
+  status      String    @default("PENDING_PAYMENT")
+  totalAmount Decimal
+  paidAmount  Decimal   @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  room        Room      @relation(fields: [roomId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model ContactMessage {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  status    String    @default("RECEIVED")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  replies   Reply[]
+}
+
+model Reply {
+  id         String         @id @default(cuid())
+  contactId  String
+  operatorId String?
+  body       String
+  sentAt     DateTime       @default(now())
+  contact    ContactMessage @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model Service {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  icon        String
+  features    String   // JSON string array
+  hours       String
+  images      String?  // JSON string array de URLs
+  imageUrl    String?  // Mantener compatibilidad (primera imagen)
+  featured    Boolean  @default(false)
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
