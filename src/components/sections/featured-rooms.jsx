@@ -184,22 +184,22 @@ export function FeaturedRooms() {
             </div>
 
             {/* Botones de Navegación */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex justify-between px-4">
+            <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 flex justify-between px-2 sm:px-4 pointer-events-none">
               <Button
                 onClick={goToPrevious}
                 size="icon"
                 variant="outline"
-                className="h-12 w-12 rounded-full bg-white shadow-lg hover:bg-gray-50 transition-all"
+                className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-white shadow-lg hover:bg-gray-50 transition-all pointer-events-auto"
               >
-                <ChevronLeft className="h-6 w-6" />
+                <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
               </Button>
               <Button
                 onClick={goToNext}
                 size="icon"
                 variant="outline"
-                className="h-12 w-12 rounded-full bg-white shadow-lg hover:bg-gray-50 transition-all"
+                className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-white shadow-lg hover:bg-gray-50 transition-all pointer-events-auto"
               >
-                <ChevronRight className="h-6 w-6" />
+                <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
               </Button>
             </div>
 

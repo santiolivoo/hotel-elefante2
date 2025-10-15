@@ -165,6 +165,15 @@ export function Header() {
                   >
                     Mis Reservas
                   </Link>
+                  {(session.user.role === 'ADMIN' || session.user.role === 'OPERATOR') && (
+                    <Link
+                      href={session.user.role === 'ADMIN' ? '/admin/dashboard' : '/operador/reservas'}
+                      className="block px-3 py-2 text-sm font-medium text-primary border-t border-gray-200 mt-2 pt-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Panel de Control
+                    </Link>
+                  )}
                   <button
                     onClick={handleSignOut}
                     className="block w-full text-left px-3 py-2 text-sm font-medium text-gray-700"

@@ -26,7 +26,13 @@ import {
   DollarSign, 
   TrendingUp, 
   Building,
-  Loader2
+  Loader2,
+  Users,
+  MessageSquare,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Eye
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
@@ -67,6 +73,22 @@ export default function AdminDashboardPage() {
       }, 500)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+      // Set default empty data on error
+      setDashboardData({
+        stats: {
+          activeReservations: 0,
+          checkInsToday: 0,
+          checkOutsToday: 0,
+          pendingPayments: 0,
+          newMessages: 0,
+          totalReservations: 0,
+          totalRevenue: 0,
+          occupancyRate: 0
+        },
+        revenueData: [],
+        roomTypeData: [],
+        recentReservations: []
+      })
       setIsLoading(false)
     }
   }
@@ -75,6 +97,26 @@ export default function AdminDashboardPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  // Safety check - should not happen but prevents null destructuring
+  if (!dashboardData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Error al cargar el dashboard
+          </h3>
+          <p className="text-gray-600 mb-4">
+            No se pudieron cargar los datos. Por favor, intenta recargar la página.
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            Recargar página
+          </Button>
+        </div>
       </div>
     )
   }
@@ -108,7 +150,110 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Diarias - Prioridad alta */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => router.push('/admin/reservas')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Huéspedes Activos</p>
+                <p className="text-2xl font-bold text-purple-600">{stats.activeReservations || 0}</p>
+              </div>
+              <Users className="h-8 w-8 text-purple-600" />
+            </div>
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">
+                Actualmente en el hotel
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => router.push('/admin/reservas')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Check-ins Hoy</p>
+                <p className="text-2xl font-bold text-green-600">{stats.checkInsToday || 0}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">
+                Llegadas programadas
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => router.push('/admin/reservas')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Check-outs Hoy</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.checkOutsToday || 0}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-blue-600" />
+            </div>
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">
+                Salidas programadas
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => router.push('/admin/reservas')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pagos Pendientes</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.pendingPayments || 0}</p>
+              </div>
+              <AlertCircle className="h-8 w-8 text-orange-600" />
+            </div>
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">
+                Requieren atención
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => router.push('/operador/mensajes')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Mensajes Nuevos</p>
+                <p className="text-2xl font-bold text-indigo-600">{stats.newMessages || 0}</p>
+              </div>
+              <MessageSquare className="h-8 w-8 text-indigo-600" />
+            </div>
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">
+                Sin responder
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Stats Anuales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow"

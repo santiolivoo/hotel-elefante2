@@ -248,7 +248,7 @@ export default function MisReservasPage() {
 
           {/* Reservations List */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
               <TabsTrigger value="all">Todas</TabsTrigger>
               <TabsTrigger value="active">Activas</TabsTrigger>
               <TabsTrigger value="past">Pasadas</TabsTrigger>
