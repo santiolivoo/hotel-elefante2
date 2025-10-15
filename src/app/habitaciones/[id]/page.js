@@ -39,12 +39,7 @@ export default function HabitacionDetailPage() {
       const data = await response.json()
       
       if (response.ok && data.room) {
-        // Usar imágenes y datos del API
-        const enrichedRoom = {
-          ...data.room,
-          images: data.room.images || [data.room.image, data.room.image, data.room.image]
-        }
-        setRoom(enrichedRoom)
+        setRoom(data.room)
       }
     } catch (error) {
       console.error('Error loading room:', error)
@@ -113,28 +108,30 @@ export default function HabitacionDetailPage() {
             <div>
               <div className="mb-4">
                 <img
-                  src={room.images[selectedImage]}
+                  src={room.images[selectedImage] || room.image}
                   alt={room.name}
-                  className="w-full h-96 object-cover rounded-lg"
+                  className="w-full h-64 sm:h-80 lg:h-96 object-cover rounded-lg"
                 />
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {room.images.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`relative h-24 rounded-lg overflow-hidden ${
-                      selectedImage === index ? 'ring-2 ring-primary' : ''
-                    }`}
-                  >
-                    <img
-                      src={image}
-                      alt={`${room.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
+              {room.images && room.images.length > 1 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 gap-2">
+                  {room.images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`relative h-20 sm:h-24 rounded-lg overflow-hidden transition-all ${
+                        selectedImage === index ? 'ring-2 ring-primary' : 'hover:opacity-80'
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${room.name} ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Room Info */}
@@ -144,11 +141,11 @@ export default function HabitacionDetailPage() {
                   <Badge variant="secondary">{room.roomType}</Badge>
                 </div>
                 
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                   {room.name}
                 </h1>
                 
-                <div className="flex items-center gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
                   <div className="flex items-center">
                     <Star className="h-4 w-4 text-yellow-400 fill-current" />
                     <span className="ml-1 text-sm font-medium">{room.rating}</span>
@@ -160,14 +157,14 @@ export default function HabitacionDetailPage() {
                   </div>
                 </div>
 
-                <p className="text-gray-600 mb-6">{room.description}</p>
+                <p className="text-gray-600 mb-6 text-sm sm:text-base">{room.description}</p>
 
-                <div className="text-3xl font-bold text-primary mb-6">
+                <div className="text-2xl sm:text-3xl font-bold text-primary mb-6">
                   {formatCurrency(room.price)}
-                  <span className="text-lg font-normal text-gray-500">/noche</span>
+                  <span className="text-base sm:text-lg font-normal text-gray-500">/noche</span>
                 </div>
 
-                <div className="flex gap-4 mb-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
                   <Link href="/reservar" className="flex-1">
                     <Button size="lg" className="w-full" disabled={room.available === 0}>
                       {room.available > 0 ? 'Reservar Ahora' : 'No disponible'}
@@ -176,10 +173,11 @@ export default function HabitacionDetailPage() {
                   <Button 
                     variant={showCalendar ? "default" : "outline"} 
                     size="lg"
+                    className="w-full sm:w-auto"
                     onClick={() => setShowCalendar(!showCalendar)}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    {showCalendar ? 'Ocultar Fechas' : 'Consultar Fechas'}
+                    {showCalendar ? 'Ocultar' : 'Ver'} Fechas
                   </Button>
                 </div>
               </div>

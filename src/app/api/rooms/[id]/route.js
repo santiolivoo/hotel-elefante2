@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request, { params }) {
   try {
     const roomTypeId = parseInt(params.id)
@@ -43,7 +45,7 @@ export async function GET(request, { params }) {
       roomType: roomType.name,
       available: roomType.rooms.length,
       image: mainImage,
-      images: [mainImage],
+      images: images.length > 0 ? images : (mainImage ? [mainImage] : []),
       rating: 4.7,
       reviews: 25
     }
