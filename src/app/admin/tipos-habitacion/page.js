@@ -423,11 +423,15 @@ function RoomTypeForm({ editingType, onSubmit, onCancel }) {
             const uploadData = await uploadResponse.json()
             allImages.push(uploadData.url)
           } else {
-            throw new Error('Error al subir la imagen')
+            const errorData = await uploadResponse.json()
+            console.error('Error al subir imagen:', errorData)
+            throw new Error(errorData.error || 'Error al subir la imagen')
           }
         }
       } catch (error) {
         console.error('Error uploading images:', error)
+        alert(`Error al subir imágenes: ${error.message}. Verifica que Supabase esté configurado correctamente.`)
+        return // No continuar con el guardado si las imágenes fallan
       }
     }
     

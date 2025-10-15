@@ -221,6 +221,16 @@ export default function AdminServiciosPage() {
           if (uploadResponse.ok) {
             const uploadData = await uploadResponse.json()
             allImages.push(uploadData.url)
+          } else {
+            const errorData = await uploadResponse.json()
+            console.error('Error al subir imagen:', errorData)
+            toast({
+              title: 'Error al subir imagen',
+              description: errorData.error || 'Verifica que Supabase esté configurado correctamente',
+              variant: 'destructive',
+            })
+            setIsSaving(false)
+            return // No continuar si hay error al subir imágenes
           }
         }
       }
