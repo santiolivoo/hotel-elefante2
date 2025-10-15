@@ -20,6 +20,33 @@ const supabaseAdmin = createClient(SUPABASE_URL ?? '', SUPABASE_SERVICE_ROLE ?? 
 // Ejecutar en Node (la service key no puede ir en Edge)
 export const runtime = 'nodejs'
 
+// Función para sanitizar nombres de archivo
+function sanitizeFilename(filename) {
+  // Separar nombre y extensión
+  const lastDotIndex = filename.lastIndexOf('.')
+  const name = lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename
+  const ext = lastDotIndex > 0 ? filename.substring(lastDotIndex) : ''
+  
+  // Limpiar el nombre:
+  // 1. Convertir a minúsculas
+  // 2. Reemplazar espacios con guiones
+  // 3. Eliminar acentos y caracteres especiales
+  const cleanName = name
+    .toLowerCase()
+    .replace(/\s+/g, '-') // Espacios a guiones
+    .replace(/á/g, 'a')
+    .replace(/é/g, 'e')
+    .replace(/í/g, 'i')
+    .replace(/ó/g, 'o')
+    .replace(/ú/g, 'u')
+    .replace(/ñ/g, 'n')
+    .replace(/[^a-z0-9-_.]/g, '') // Solo letras, números, guiones, puntos y guiones bajos
+    .replace(/-+/g, '-') // Múltiples guiones a uno solo
+    .replace(/^-|-$/g, '') // Eliminar guiones al inicio/fin
+  
+  return cleanName + ext.toLowerCase()
+}
+
 export async function POST(req) {
   try {
     console.log('📤 [UPLOAD] Iniciando subida de archivo...')
@@ -47,7 +74,8 @@ export async function POST(req) {
 
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-    const path = `uploads/${Date.now()}-${file.name}`
+    const sanitizedName = sanitizeFilename(file.name)
+    const path = `uploads/${Date.now()}-${sanitizedName}`
 
     console.log('🔄 [UPLOAD] Subiendo a Supabase:', path)
 

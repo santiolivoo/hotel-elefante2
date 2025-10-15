@@ -204,9 +204,7 @@ async function main() {
         roomTypeId: suiteEstandarType.id,
         status: i <= 2 ? 'AVAILABLE' : 'OCCUPIED',
         description: `Suite estándar en el primer piso con todas las comodidades básicas.`,
-        images: JSON.stringify([
-          '/Imagenes del hotel/suite estandar.jpg'
-        ])
+        images: JSON.stringify([])
       }
     })
     rooms.push(room)
@@ -221,9 +219,7 @@ async function main() {
         roomTypeId: suiteDeluxeType.id,
         status: i <= 3 ? 'AVAILABLE' : 'OCCUPIED',
         description: `Suite deluxe con vista panorámica al Cerro Elefante.`,
-        images: JSON.stringify([
-          '/Imagenes del hotel/suite deluxe.jpg'
-        ])
+        images: JSON.stringify([])
       }
     })
     rooms.push(room)
@@ -238,9 +234,7 @@ async function main() {
         roomTypeId: suiteFamiliarType.id,
         status: i <= 2 ? 'AVAILABLE' : 'RESERVED',
         description: `Suite familiar con espacio para toda la familia.`,
-        images: JSON.stringify([
-          '/Imagenes del hotel/suite familiar.jpg'
-        ])
+        images: JSON.stringify([])
       }
     })
     rooms.push(room)
@@ -255,9 +249,7 @@ async function main() {
         roomTypeId: suitePresidencialType.id,
         status: 'AVAILABLE',
         description: `Suite presidencial con jacuzzi y las mejores vistas del hotel.`,
-        images: JSON.stringify([
-          '/Imagenes del hotel/suite presi.jpg'
-        ])
+        images: JSON.stringify([])
       }
     })
     rooms.push(room)
@@ -272,9 +264,7 @@ async function main() {
         roomTypeId: suiteVIPType.id,
         status: i === 1 ? 'AVAILABLE' : 'OCCUPIED',
         description: `Suite VIP exclusiva con servicio personalizado.`,
-        images: JSON.stringify([
-          '/Imagenes del hotel/suite vip.jpg'
-        ])
+        images: JSON.stringify([])
       }
     })
     rooms.push(room)
@@ -400,7 +390,7 @@ async function main() {
       icon: 'Sparkles',
       features: ['Juegos de mesa', 'Tragamonedas', 'Bar premium', 'Shows en vivo', 'Área VIP'],
       hours: 'Todos los días: 20:00 - 04:00',
-      imageUrl: '/Imagenes del hotel/Acceso a casino.jpg',
+      imageUrl: null,
       featured: true,
       active: true,
       order: 1
@@ -411,7 +401,7 @@ async function main() {
       icon: 'Wind',
       features: ['Instructores certificados', 'Equipo profesional', 'Fotos y videos', 'Vuelo tándem', 'Seguro incluido'],
       hours: 'Previa reserva - Según clima',
-      imageUrl: '/Imagenes del hotel/Servicio Parapente Salta.jpg',
+      imageUrl: null,
       featured: true,
       active: true,
       order: 2
@@ -422,7 +412,7 @@ async function main() {
       icon: 'Waves',
       features: ['Piscina climatizada', 'Bar de piscina', 'Reposeras', 'Vista panorámica', 'Área para niños'],
       hours: 'Todos los días: 8:00 - 20:00',
-      imageUrl: '/Imagenes del hotel/Bar junto a la piscina.jpg',
+      imageUrl: null,
       featured: true,
       active: true,
       order: 3
@@ -434,7 +424,7 @@ async function main() {
       icon: 'Utensils',
       features: ['Cocina gourmet', 'Carta de vinos', 'Menú degustación', 'Vista al valle'],
       hours: 'Lunes a Domingo: 7:00 - 23:00',
-      imageUrl: '/Imagenes del hotel/Restaurante Gourmet.jpg',
+      imageUrl: null,
       featured: false,
       active: true,
       order: 4
@@ -445,7 +435,7 @@ async function main() {
       icon: 'Coffee',
       features: ['Cócteles artesanales', 'Bebidas frías', 'Snacks y aperitivos', 'Música ambiente'],
       hours: 'Todos los días: 10:00 - 20:00',
-      imageUrl: '/Imagenes del hotel/Bar junto a la piscina.jpg',
+      imageUrl: null,
       featured: false,
       active: true,
       order: 5
@@ -456,7 +446,7 @@ async function main() {
       icon: 'UtensilsCrossed',
       features: ['Buffet completo', 'Opciones veganas', 'Frutas frescas', 'Panadería artesanal'],
       hours: 'Todos los días: 7:00 - 11:00',
-      imageUrl: '/Imagenes del hotel/Desayuno Buffet.jpg',
+      imageUrl: null,
       featured: false,
       active: true,
       order: 6
@@ -467,7 +457,7 @@ async function main() {
       icon: 'Dumbbell',
       features: ['Equipamiento moderno', 'Pesas libres', 'Máquinas cardio', 'Vista panorámica'],
       hours: 'Todos los días: 6:00 - 22:00',
-      imageUrl: '/Imagenes del hotel/GYM.jpg',
+      imageUrl: null,
       featured: false,
       active: true,
       order: 7
@@ -478,7 +468,7 @@ async function main() {
       icon: 'Heart',
       features: ['Masajes relajantes', 'Terapia de piedras', 'Aromaterapia', 'Tratamientos faciales'],
       hours: 'Lunes a Domingo: 9:00 - 21:00',
-      imageUrl: '/Imagenes del hotel/Masajes Corporales.jpg',
+      imageUrl: null,
       featured: false,
       active: true,
       order: 8
@@ -489,7 +479,7 @@ async function main() {
       icon: 'Phone',
       features: ['Disponible 24/7', 'Menú completo', 'Desayuno en cama', 'Entrega rápida'],
       hours: 'Disponible 24 horas',
-      imageUrl: '/Imagenes del hotel/Servicio a la habitacion.jpg',
+      imageUrl: null,
       featured: false,
       active: true,
       order: 9
@@ -500,7 +490,7 @@ async function main() {
       icon: 'Shirt',
       features: ['Lavado y planchado', 'Servicio express', 'Limpieza en seco', 'Entrega en habitación'],
       hours: 'Lunes a Domingo: 8:00 - 20:00',
-      imageUrl: '/Imagenes del hotel/Servicio de Lavanderia.jpg',
+      imageUrl: null,
       featured: false,
       active: true,
       order: 10

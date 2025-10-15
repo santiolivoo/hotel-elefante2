@@ -20,7 +20,9 @@ import {
   Loader2,
   Upload,
   Image as ImageIcon,
-  X
+  X,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
@@ -385,10 +387,63 @@ function RoomTypeForm({ editingType, onSubmit, onCancel }) {
     }
   }
 
-  const handleRemoveImage = (index) => {
+  const handleMoveImage = (index, direction) => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    
+    if (newIndex < 0 || newIndex >= imagePreviews.length) return
+    
+    // Reordenar previews
+    const newPreviews = [...imagePreviews]
+    const temp = newPreviews[index]
+    newPreviews[index] = newPreviews[newIndex]
+    newPreviews[newIndex] = temp
+    setImagePreviews(newPreviews)
+    
+    // Reordenar formData.images (solo las URL ya guardadas)
+    const numExisting = formData.images.length
+    if (index < numExisting && newIndex < numExisting) {
+      const newImages = [...formData.images]
+      const tempImg = newImages[index]
+      newImages[index] = newImages[newIndex]
+      newImages[newIndex] = tempImg
+      setFormData(prev => ({ ...prev, images: newImages }))
+    }
+  }
+
+  const handleRemoveImage = async (index) => {
+    const imageUrl = imagePreviews[index]
+    
+    // Si es una URL de Supabase (imagen ya subida), eliminarla del storage
+    if (typeof imageUrl === 'string' && imageUrl.includes('supabase.co')) {
+      try {
+        const response = await fetch('/api/upload/delete', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: imageUrl }),
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          console.error('Error al eliminar imagen:', error)
+          alert('Error al eliminar la imagen de Supabase')
+          return
+        }
+        
+        console.log('✅ Imagen eliminada de Supabase')
+      } catch (error) {
+        console.error('Error al eliminar imagen:', error)
+        alert('Error al eliminar la imagen')
+        return
+      }
+    }
+    
+    // Actualizar el estado local
     setImagePreviews(prev => prev.filter((_, i) => i !== index))
+    
     // Si es una imagen existente (URL), removerla del formData
-    if (typeof imagePreviews[index] === 'string' && imagePreviews[index].startsWith('/')) {
+    if (typeof imageUrl === 'string' && (imageUrl.startsWith('/') || imageUrl.startsWith('http'))) {
       setFormData(prev => ({
         ...prev,
         images: prev.images.filter((_, i) => i !== index)
@@ -551,13 +606,36 @@ function RoomTypeForm({ editingType, onSubmit, onCancel }) {
                     alt={`Preview ${index + 1}`} 
                     className="w-full h-32 object-cover rounded-lg"
                   />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(index)}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {index > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleMoveImage(index, 'up')}
+                        className="bg-blue-500 text-white p-1 rounded-full hover:bg-blue-600"
+                        title="Mover arriba"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
+                    )}
+                    {index < imagePreviews.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleMoveImage(index, 'down')}
+                        className="bg-blue-500 text-white p-1 rounded-full hover:bg-blue-600"
+                        title="Mover abajo"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                      title="Eliminar"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                   {index === 0 && (
                     <Badge className="absolute bottom-2 left-2 bg-primary">Principal</Badge>
                   )}

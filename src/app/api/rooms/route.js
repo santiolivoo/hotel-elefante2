@@ -23,7 +23,8 @@ export async function GET(request) {
     // Formatear los datos para la respuesta
     const formattedRoomTypes = roomTypes.map(type => {
       const images = type.images ? JSON.parse(type.images) : []
-      const mainImage = images[0] || type.imageUrl || getDefaultImage(type.name)
+      // Usar imageUrl como principal, si no existe usar la primera del array
+      const mainImage = type.imageUrl || images[0] || null
       
       return {
         id: type.id,
@@ -37,7 +38,7 @@ export async function GET(request) {
         roomType: type.name,
         available: type.rooms.length,
         image: mainImage,
-        images: images.length > 0 ? images : [mainImage]
+        images: images.length > 0 ? images : (mainImage ? [mainImage] : [])
       }
     })
 
@@ -51,15 +52,3 @@ export async function GET(request) {
   }
 }
 
-// Función auxiliar para obtener imágenes por defecto según el tipo
-function getDefaultImage(typeName) {
-  const imageMap = {
-    'Suite Estándar': '/Imagenes del hotel/suite estandar.jpg',
-    'Suite Familiar': '/Imagenes del hotel/suite familiar.jpg',
-    'Suite Deluxe': '/Imagenes del hotel/suite deluxe.jpg',
-    'Suite Presidencial': '/Imagenes del hotel/suite presi.jpg',
-    'Suite VIP': '/Imagenes del hotel/suite vip.jpg'
-  }
-  
-  return imageMap[typeName] || '/Imagenes del hotel/suite estandar.jpg'
-}

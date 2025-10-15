@@ -181,8 +181,35 @@ export default function AdminServiciosPage() {
     }
   }
 
-  const handleRemoveImage = (index) => {
+  const handleRemoveImage = async (index) => {
+    const imageUrl = imagePreviews[index]
     const numExistingImages = formData.images.length
+    
+    // Si es una URL de Supabase (imagen ya subida), eliminarla del storage
+    if (typeof imageUrl === 'string' && imageUrl.includes('supabase.co')) {
+      try {
+        const response = await fetch('/api/upload/delete', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: imageUrl }),
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          console.error('Error al eliminar imagen:', error)
+          alert('Error al eliminar la imagen de Supabase')
+          return
+        }
+        
+        console.log('✅ Imagen eliminada de Supabase')
+      } catch (error) {
+        console.error('Error al eliminar imagen:', error)
+        alert('Error al eliminar la imagen')
+        return
+      }
+    }
     
     if (index < numExistingImages) {
       // Es una imagen existente (de BD)

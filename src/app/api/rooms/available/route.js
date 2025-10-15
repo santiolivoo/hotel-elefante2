@@ -93,8 +93,9 @@ export async function GET(request) {
       // Solo incluir si hay al menos una habitación disponible
       if (availableCount > 0) {
         const images = roomType.images ? JSON.parse(roomType.images) : []
-        const mainImage = images[0] || roomType.imageUrl || getDefaultImage(roomType.name)
-
+        // Usar imageUrl como principal, si no existe usar la primera del array
+        const mainImage = roomType.imageUrl || images[0] || null
+        
         availableRoomTypes.push({
           id: roomType.id,
           name: roomType.name,
@@ -107,7 +108,7 @@ export async function GET(request) {
           roomType: roomType.name,
           available: availableCount,
           image: mainImage,
-          images: images.length > 0 ? images : [mainImage]
+          images: images.length > 0 ? images : (mainImage ? [mainImage] : [])
         })
       }
     }
@@ -127,15 +128,3 @@ export async function GET(request) {
   }
 }
 
-// Función auxiliar para obtener imágenes por defecto según el tipo
-function getDefaultImage(typeName) {
-  const imageMap = {
-    'Suite Estándar': '/Imagenes del hotel/suite estandar.jpg',
-    'Suite Familiar': '/Imagenes del hotel/suite familiar.jpg',
-    'Suite Deluxe': '/Imagenes del hotel/suite deluxe.jpg',
-    'Suite Presidencial': '/Imagenes del hotel/suite presi.jpg',
-    'Suite VIP': '/Imagenes del hotel/suite vip.jpg'
-  }
-  
-  return imageMap[typeName] || '/Imagenes del hotel/suite estandar.jpg'
-}
