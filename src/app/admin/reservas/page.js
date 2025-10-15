@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -67,7 +67,7 @@ const formatDateRange = (dateFrom, dateTo) => {
   return `${fromStr} - ${toStr}`
 }
 
-export default function AdminReservasPage() {
+function AdminReservasContent() {
   const [reservations, setReservations] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedReservation, setSelectedReservation] = useState(null)
@@ -230,7 +230,7 @@ export default function AdminReservasPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Gestión de Reservas e Ingresos</h1>
@@ -827,5 +827,17 @@ export default function AdminReservasPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function AdminReservasPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <AdminReservasContent />
+    </Suspense>
   )
 }
