@@ -11,13 +11,17 @@ import {
   Loader2,
   Image as ImageIcon,
   DollarSign,
-  Info
+  Info,
+  Calendar
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { RoomTypeAvailabilityCalendar } from '@/components/ui/room-type-availability-calendar'
 
 export default function OperadorTiposHabitacionPage() {
   const [roomTypes, setRoomTypes] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showCalendarForType, setShowCalendarForType] = useState(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -139,6 +143,7 @@ export default function OperadorTiposHabitacionPage() {
                 <TableHead>Precio Base</TableHead>
                 <TableHead>Capacidad</TableHead>
                 <TableHead>Habitaciones</TableHead>
+                <TableHead>Calendario</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -203,6 +208,16 @@ export default function OperadorTiposHabitacionPage() {
                       {type._count?.rooms || 0}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCalendarForType(showCalendarForType === type.id ? null : type.id)}
+                      title="Ver disponibilidad"
+                    >
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               )})}
             </TableBody>
@@ -216,6 +231,29 @@ export default function OperadorTiposHabitacionPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Calendario de disponibilidad */}
+      {showCalendarForType && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>
+                Disponibilidad: {roomTypes.find(t => t.id === showCalendarForType)?.name}
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCalendarForType(null)}
+              >
+                Cerrar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <RoomTypeAvailabilityCalendar roomTypeId={showCalendarForType} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Details Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

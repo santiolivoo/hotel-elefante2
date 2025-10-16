@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
@@ -12,6 +12,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { BookingWizard } from '@/components/ui/booking-wizard'
+import { RoomDetailCompact } from '@/components/ui/room-detail-compact'
+import { RoomFilters } from '@/components/ui/room-filters'
+import { RoomComparison } from '@/components/ui/room-comparison'
 import { useToast } from '@/hooks/use-toast'
 import { 
   Calendar, 
@@ -21,19 +25,26 @@ import {
   AlertCircle,
   CheckCircle,
   CreditCard,
-  Clock
+  Clock,
+  ArrowRight,
+  ArrowLeft,
+  GitCompare
 } from 'lucide-react'
 import { formatCurrency, calculateDays } from '@/lib/utils'
 
 export default function ReservarPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   
+  // Wizard state
+  const [currentStep, setCurrentStep] = useState(1)
+  
   const [searchData, setSearchData] = useState({
-    checkIn: '',
-    checkOut: '',
-    guests: '2'
+    checkIn: searchParams.get('checkIn') || '',
+    checkOut: searchParams.get('checkOut') || '',
+    guests: searchParams.get('guests') || '2'
   })
   const [selectedRoom, setSelectedRoom] = useState(null)
   const [isSearching, setIsSearching] = useState(false)
@@ -42,18 +53,95 @@ export default function ReservarPage() {
   const [showResults, setShowResults] = useState(false)
   const [availableRooms, setAvailableRooms] = useState([])
   const [isLoadingRooms, setIsLoadingRooms] = useState(true)
+  
+  // New features state
+  const [filters, setFilters] = useState({
+    maxPrice: '',
+    minCapacity: 'all',
+    roomType: 'all',
+    bedType: 'all',
+    sortBy: 'relevance'
+  })
+  const [comparisonRooms, setComparisonRooms] = useState([])
+  const [showComparison, setShowComparison] = useState(false)
+  const [preselectedRoomId, setPreselectedRoomId] = useState(searchParams.get('roomId') || null)
 
   // Load available room types from API
   useEffect(() => {
     fetchRoomTypes()
   }, [])
 
-  // Redirect if not authenticated
+  // Pre-select room if roomId is in URL
+  const hasPreselected = useRef(false)
+  
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login')
+    // Only proceed if user is authenticated and rooms are loaded
+    if (status !== 'authenticated' || !availableRooms.length) return
+    
+    // Only run once
+    if (preselectedRoomId && !hasPreselected.current) {
+      // Try both string and number comparison for flexibility
+      const room = availableRooms.find(r => r.id === preselectedRoomId || r.id === parseInt(preselectedRoomId))
+      
+      if (room) {
+        hasPreselected.current = true
+        setSelectedRoom(room)
+        
+        // If dates are provided, move to step 3, otherwise stay on step 1
+        if (searchData.checkIn && searchData.checkOut) {
+          setCurrentStep(3)
+          setShowResults(true)
+        } else {
+          setCurrentStep(1)
+        }
+      }
     }
-  }, [status, router])
+  }, [preselectedRoomId, availableRooms, status])
+
+  // Redirect if not authenticated - using ref to prevent loops
+  const isRedirecting = useRef(false)
+  
+  useEffect(() => {
+    if (status === 'loading') return
+    
+    if (status === 'unauthenticated') {
+      // Check if we just came back from login
+      const justLoggedIn = sessionStorage.getItem('justLoggedIn')
+      
+      if (justLoggedIn === 'true') {
+        // Clear the flag after 3 seconds
+        setTimeout(() => {
+          sessionStorage.removeItem('justLoggedIn')
+        }, 3000)
+        return
+      }
+      
+      // Only redirect once
+      if (!isRedirecting.current) {
+        isRedirecting.current = true
+        const currentParams = window.location.search
+        const returnUrl = encodeURIComponent(`/reservar${currentParams}`)
+        window.location.href = `/login?returnUrl=${returnUrl}`
+      }
+    } else if (status === 'authenticated') {
+      isRedirecting.current = false
+      sessionStorage.removeItem('hasRedirectedToLogin')
+      sessionStorage.removeItem('justLoggedIn')
+      hasPreselected.current = false
+    }
+  }, [status])
+  
+  // Update URL with current state - disabled to prevent interference
+  // useEffect(() => {
+  //   const params = new URLSearchParams()
+  //   if (searchData.checkIn) params.set('checkIn', searchData.checkIn)
+  //   if (searchData.checkOut) params.set('checkOut', searchData.checkOut)
+  //   if (searchData.guests) params.set('guests', searchData.guests)
+  //   if (selectedRoom) params.set('roomId', selectedRoom.id)
+    
+  //   const newUrl = `${window.location.pathname}?${params.toString()}`
+  //   window.history.replaceState({}, '', newUrl)
+  // }, [searchData, selectedRoom])
 
   const fetchRoomTypes = async () => {
     try {
@@ -100,8 +188,8 @@ export default function ReservarPage() {
     })
   }
 
-  const handleSearch = async (e) => {
-    e.preventDefault()
+  const handleSearch = async (e, autoSearch = false) => {
+    if (e) e.preventDefault()
     
     if (!searchData.checkIn || !searchData.checkOut) {
       toast({
@@ -124,7 +212,6 @@ export default function ReservarPage() {
     setIsSearching(true)
     
     try {
-      // Buscar habitaciones disponibles para las fechas específicas
       const response = await fetch(
         `/api/rooms/available?checkIn=${searchData.checkIn}&checkOut=${searchData.checkOut}&guests=${searchData.guests}`
       )
@@ -133,6 +220,9 @@ export default function ReservarPage() {
         const data = await response.json()
         setSearchResults(data.roomTypes)
         setShowResults(true)
+        if (!autoSearch) {
+          setCurrentStep(2)
+        }
         
         if (data.roomTypes.length === 0) {
           toast({
@@ -161,6 +251,84 @@ export default function ReservarPage() {
 
   const handleRoomSelect = (room) => {
     setSelectedRoom(room)
+    setCurrentStep(3)
+  }
+  
+  // Filter and sort rooms
+  const applyFiltersAndSort = (rooms) => {
+    let filtered = [...rooms]
+    
+    // Apply filters
+    if (filters.maxPrice) {
+      filtered = filtered.filter(room => room.price <= parseInt(filters.maxPrice))
+    }
+    
+    if (filters.minCapacity !== 'all') {
+      filtered = filtered.filter(room => room.maxGuests >= parseInt(filters.minCapacity))
+    }
+    
+    if (filters.roomType !== 'all') {
+      filtered = filtered.filter(room => room.roomType === filters.roomType)
+    }
+    
+    if (filters.bedType !== 'all') {
+      filtered = filtered.filter(room => room.bedType && room.bedType.includes(filters.bedType))
+    }
+    
+    // Apply sorting
+    switch (filters.sortBy) {
+      case 'price-asc':
+        filtered.sort((a, b) => a.price - b.price)
+        break
+      case 'price-desc':
+        filtered.sort((a, b) => b.price - a.price)
+        break
+      case 'capacity-desc':
+        filtered.sort((a, b) => b.maxGuests - a.maxGuests)
+        break
+      case 'name-asc':
+        filtered.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      default:
+        // relevance - keep original order
+        break
+    }
+    
+    return filtered
+  }
+  
+  // Comparison functions
+  const toggleComparison = (room) => {
+    if (comparisonRooms.find(r => r.id === room.id)) {
+      setComparisonRooms(comparisonRooms.filter(r => r.id !== room.id))
+    } else if (comparisonRooms.length < 3) {
+      setComparisonRooms([...comparisonRooms, room])
+    } else {
+      toast({
+        title: 'Límite alcanzado',
+        description: 'Solo puedes comparar hasta 3 habitaciones a la vez',
+        variant: 'destructive',
+      })
+    }
+  }
+  
+  const removeFromComparison = (roomId) => {
+    setComparisonRooms(comparisonRooms.filter(r => r.id !== roomId))
+  }
+  
+  const selectFromComparison = (room) => {
+    handleRoomSelect(room)
+    setShowComparison(false)
+  }
+  
+  const clearFilters = () => {
+    setFilters({
+      maxPrice: '',
+      minCapacity: 'all',
+      roomType: 'all',
+      bedType: 'all',
+      sortBy: 'relevance'
+    })
   }
 
   const handleBooking = async () => {
@@ -223,12 +391,22 @@ export default function ReservarPage() {
     )
   }
 
+  // Don't render anything while redirecting
   if (status === 'unauthenticated') {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+          <p className="text-gray-600">Redirigiendo al login...</p>
+        </div>
+      </div>
+    )
   }
 
   const days = searchData.checkIn && searchData.checkOut ? 
     calculateDays(searchData.checkIn, searchData.checkOut) : 0
+  
+  const filteredRooms = applyFiltersAndSort(showResults ? searchResults : [])
 
   return (
     <div className="min-h-screen">
@@ -245,6 +423,9 @@ export default function ReservarPage() {
               Encuentra y reserva la habitación perfecta para tu estadía
             </p>
           </div>
+          
+          {/* Booking Wizard */}
+          <BookingWizard currentStep={currentStep} />
 
           {/* Search Form */}
           <Card className="mb-8">
@@ -327,12 +508,34 @@ export default function ReservarPage() {
             </CardContent>
           </Card>
 
-          {/* Search Results */}
-          {showResults && (
+          {/* Comparison View */}
+          {showComparison && comparisonRooms.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Habitaciones Disponibles
-              </h2>
+              <RoomComparison 
+                rooms={comparisonRooms}
+                onRemoveRoom={removeFromComparison}
+                onSelectRoom={selectFromComparison}
+              />
+            </div>
+          )}
+
+          {/* Search Results */}
+          {showResults && currentStep === 2 && (
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Habitaciones Disponibles ({filteredRooms.length})
+                </h2>
+                {comparisonRooms.length > 0 && (
+                  <Button
+                    variant={showComparison ? "default" : "outline"}
+                    onClick={() => setShowComparison(!showComparison)}
+                  >
+                    <GitCompare className="mr-2 h-4 w-4" />
+                    Comparar ({comparisonRooms.length})
+                  </Button>
+                )}
+              </div>
               
               {searchResults.length === 0 ? (
                 <Card>
@@ -348,8 +551,37 @@ export default function ReservarPage() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {searchResults.map((room) => (
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  {/* Filters Sidebar */}
+                  <div className="lg:col-span-1">
+                    <RoomFilters 
+                      filters={filters}
+                      onFiltersChange={setFilters}
+                      onClearFilters={clearFilters}
+                    />
+                  </div>
+                  
+                  {/* Rooms Grid */}
+                  <div className="lg:col-span-3">
+                    {filteredRooms.length === 0 ? (
+                      <Card>
+                        <CardContent className="text-center py-8">
+                          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            No hay resultados
+                          </h3>
+                          <p className="text-gray-600">
+                            No encontramos habitaciones que coincidan con tus filtros.
+                            Intenta ajustar los criterios de búsqueda.
+                          </p>
+                          <Button onClick={clearFilters} variant="outline" className="mt-4">
+                            Limpiar filtros
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        {filteredRooms.map((room) => (
                     <Card 
                       key={room.id} 
                       className={`cursor-pointer transition-all ${
@@ -382,7 +614,7 @@ export default function ReservarPage() {
                       
                       <CardContent className="p-4">
                         <h3 className="text-lg font-semibold mb-2">{room.name}</h3>
-                        <p className="text-gray-600 text-sm mb-3">{room.description}</p>
+                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">{room.description}</p>
                         
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center text-sm text-gray-500">
@@ -400,13 +632,13 @@ export default function ReservarPage() {
                             )}
                             {room.bedType && (
                               <Badge variant="outline" className="text-xs">
-                                🛏️ {room.bedType}
+                                🛌️ {room.bedType}
                               </Badge>
                             )}
                           </div>
                         )}
                         
-                        <div className="border-t pt-3">
+                        <div className="border-t pt-3 mb-3">
                           <div className="flex justify-between items-center">
                             <div>
                               <div className="text-2xl font-bold text-primary">
@@ -426,95 +658,150 @@ export default function ReservarPage() {
                             )}
                           </div>
                         </div>
+                        
+                        {/* Comparison Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleComparison(room)
+                          }}
+                          disabled={comparisonRooms.length >= 3 && !comparisonRooms.find(r => r.id === room.id)}
+                        >
+                          <GitCompare className="h-4 w-4 mr-2" />
+                          {comparisonRooms.find(r => r.id === room.id) ? 'Quitar de comparación' : 'Añadir a comparación'}
+                        </Button>
                       </CardContent>
                     </Card>
                   ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Booking Summary */}
-          {selectedRoom && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CreditCard className="h-5 w-5 mr-2 text-primary" />
-                  Resumen de Reserva
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-semibold mb-3">Detalles de la Habitación</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Habitación:</span>
-                        <span className="font-medium">{selectedRoom.name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Tipo:</span>
-                        <span>{selectedRoom.roomType}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Huéspedes:</span>
-                        <span>{searchData.guests}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Check-in:</span>
-                        <span>{formatLocalDate(searchData.checkIn)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Check-out:</span>
-                        <span>{formatLocalDate(searchData.checkOut)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Noches:</span>
-                        <span>{days}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold mb-3">Resumen de Precios</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>{formatCurrency(selectedRoom.price)} x {days} {days === 1 ? 'noche' : 'noches'}</span>
-                        <span>{formatCurrency(selectedRoom.price * days)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Impuestos y tasas</span>
-                        <span>Incluidos</span>
-                      </div>
-                      <div className="border-t pt-2 flex justify-between font-semibold text-lg">
-                        <span>Total</span>
-                        <span className="text-primary">{formatCurrency(selectedRoom.price * days)}</span>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      onClick={handleBooking}
-                      className="w-full mt-6"
-                      size="lg"
-                      disabled={isBooking}
-                    >
-                      {isBooking ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Procesando...
-                        </>
-                      ) : (
-                        'Confirmar Reserva'
-                      )}
-                    </Button>
-                    
-                    <p className="text-xs text-gray-500 mt-2 text-center">
-                      Al confirmar, aceptas nuestros términos y condiciones
-                    </p>
-                  </div>
+          {/* Room Detail View - Step 3 */}
+          {selectedRoom && currentStep === 3 && (
+            <div className="space-y-8">
+              {/* Compact Room Detail */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Habitación Seleccionada
+                  </h2>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedRoom(null)
+                      setCurrentStep(2)
+                    }}
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Cambiar habitación
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+                <RoomDetailCompact room={selectedRoom} />
+              </div>
+              
+              {/* Booking Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <CreditCard className="h-5 w-5 mr-2 text-primary" />
+                    Resumen de Reserva
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-3">Detalles de la Reserva</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Habitación:</span>
+                          <span className="font-medium">{selectedRoom.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tipo:</span>
+                          <span>{selectedRoom.roomType}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Huéspedes:</span>
+                          <span>{searchData.guests}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Check-in:</span>
+                          <span>{formatLocalDate(searchData.checkIn)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Check-out:</span>
+                          <span>{formatLocalDate(searchData.checkOut)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Noches:</span>
+                          <span className="font-medium">{days}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-3">Resumen de Precios</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>{formatCurrency(selectedRoom.price)} x {days} {days === 1 ? 'noche' : 'noches'}</span>
+                          <span>{formatCurrency(selectedRoom.price * days)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Impuestos y tasas</span>
+                          <span>Incluidos</span>
+                        </div>
+                        <div className="border-t pt-2 flex justify-between font-semibold text-lg">
+                          <span>Total</span>
+                          <span className="text-primary">{formatCurrency(selectedRoom.price * days)}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-6 space-y-3">
+                        <Button 
+                          onClick={handleBooking}
+                          className="w-full"
+                          size="lg"
+                          disabled={isBooking}
+                        >
+                          {isBooking ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Procesando...
+                            </>
+                          ) : (
+                            <>
+                              Confirmar Reserva
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </>
+                          )}
+                        </Button>
+                        
+                        <p className="text-xs text-gray-500 text-center">
+                          Al confirmar, aceptas nuestros términos y condiciones
+                        </p>
+                      </div>
+                      
+                      {/* Cancellation Policy */}
+                      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                        <h5 className="font-medium text-sm mb-2">Política de Cancelación</h5>
+                        <p className="text-xs text-gray-600">
+                          Cancelación gratuita hasta 48 horas antes del check-in.
+                          Después de este plazo, se cobrará la primera noche.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </main>

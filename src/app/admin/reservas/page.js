@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -71,7 +71,9 @@ function AdminReservasContent() {
   const [reservations, setReservations] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedReservation, setSelectedReservation] = useState(null)
+  const [highlightedId, setHighlightedId] = useState(null)
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 })
+  const reservationRefs = useRef({})
   const [globalStats, setGlobalStats] = useState({
     checkInsToday: 0,
     checkOutsToday: 0,
@@ -91,10 +93,11 @@ function AdminReservasContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Leer filtros de URL al cargar
+  // Leer filtros y reserva específica de URL al cargar
   useEffect(() => {
     const statusParam = searchParams.get('status')
     const dateRangeParam = searchParams.get('dateRange')
+    const reservationId = searchParams.get('id')
     
     if (statusParam || dateRangeParam) {
       setFilters(prev => ({
@@ -102,10 +105,33 @@ function AdminReservasContent() {
         status: statusParam || 'ALL',
         dateRange: dateRangeParam || 'all'
       }))
-    } else {
-      fetchReservations()
     }
+    
+    if (reservationId) {
+      setHighlightedId(reservationId)
+    }
+    // El tercer useEffect se encargará de cargar los datos cuando cambien los filtros
   }, [])
+  
+  // Scroll a reserva destacada cuando se carga
+  useEffect(() => {
+    if (highlightedId && reservations.length > 0) {
+      const timeout = setTimeout(() => {
+        const element = reservationRefs.current[highlightedId]
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Auto-abrir detalles de la reserva
+          const reservation = reservations.find(r => r.id === highlightedId)
+          if (reservation) {
+            setSelectedReservation(reservation)
+          }
+          // Quitar highlight después de 3 segundos
+          setTimeout(() => setHighlightedId(null), 3000)
+        }
+      }, 500)
+      return () => clearTimeout(timeout)
+    }
+  }, [highlightedId, reservations])
 
   // Debounce para el search input
   useEffect(() => {
@@ -116,12 +142,7 @@ function AdminReservasContent() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  // Recargar cuando cambien los filtros (excepto searchInput)
-  useEffect(() => {
-    fetchReservations(1)
-  }, [filters])
-
-  const fetchReservations = async (page = 1) => {
+  const fetchReservations = useCallback(async (page = 1) => {
     setIsLoading(true)
     try {
       const params = new URLSearchParams({
@@ -157,7 +178,12 @@ function AdminReservasContent() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [filters, toast])
+
+  // Recargar cuando cambien los filtros (excepto searchInput)
+  useEffect(() => {
+    fetchReservations(1)
+  }, [filters, fetchReservations])
 
   // Aplicar filtros desde las tarjetas
   const applyQuickFilter = (filterType) => {
@@ -431,7 +457,11 @@ function AdminReservasContent() {
               </TableHeader>
               <TableBody>
                 {reservations.map((reservation) => (
-                  <TableRow key={reservation.id}>
+                  <TableRow 
+                    key={reservation.id}
+                    ref={(el) => { if (el) reservationRefs.current[reservation.id] = el }}
+                    className={highlightedId === reservation.id ? 'bg-blue-50 animate-pulse' : ''}
+                  >
                     <TableCell className="font-mono text-sm">
                       {reservation.id.slice(-8)}
                     </TableCell>

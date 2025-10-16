@@ -16,8 +16,7 @@ import {
   User,
   Home,
   Shield,
-  Bed,
-  Sparkles
+  Bed
 } from 'lucide-react'
 
 const navigation = [
@@ -33,19 +32,15 @@ const navigation = [
   },
   {
     name: 'Habitaciones',
-    href: '/operador/mapa',
-    icon: MapPin
+    href: '/operador/habitaciones',
+    icon: Bed
   },
   {
     name: 'Tipos de Habitación',
     href: '/operador/tipos-habitacion',
     icon: Bed
   },
-  {
-    name: 'Servicios',
-    href: '/operador/servicios',
-    icon: Sparkles
-  }
+  
 ]
 
 export default function OperadorLayout({ children }) {

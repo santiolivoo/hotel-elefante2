@@ -22,9 +22,11 @@ import {
   Image as ImageIcon,
   X,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Calendar
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { RoomTypeAvailabilityCalendar } from '@/components/ui/room-type-availability-calendar'
 
 export default function TiposHabitacionPage() {
   const { data: session } = useSession()
@@ -32,6 +34,7 @@ export default function TiposHabitacionPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showDialog, setShowDialog] = useState(false)
   const [editingType, setEditingType] = useState(null)
+  const [showCalendarForType, setShowCalendarForType] = useState(null)
   const { toast } = useToast()
   
   const isAdmin = session?.user?.role === 'ADMIN'
@@ -261,6 +264,7 @@ export default function TiposHabitacionPage() {
                 <TableHead>Precio Base</TableHead>
                 <TableHead>Huéspedes Máx</TableHead>
                 <TableHead>Habitaciones</TableHead>
+                <TableHead>Calendario</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -309,6 +313,16 @@ export default function TiposHabitacionPage() {
                     <Badge variant="secondary">{type._count?.rooms || 0}</Badge>
                   </TableCell>
                   <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCalendarForType(showCalendarForType === type.id ? null : type.id)}
+                      title="Ver disponibilidad"
+                    >
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-2">
                       <Button 
                         variant="outline" 
@@ -336,6 +350,29 @@ export default function TiposHabitacionPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Calendario de disponibilidad */}
+      {showCalendarForType && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>
+                Disponibilidad: {roomTypes.find(t => t.id === showCalendarForType)?.name}
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCalendarForType(null)}
+              >
+                Cerrar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <RoomTypeAvailabilityCalendar roomTypeId={showCalendarForType} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

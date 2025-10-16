@@ -211,7 +211,7 @@ export function FeaturedRooms() {
                         Ver Detalles
                       </Button>
                     </Link>
-                    <Link href="/reservar" className="flex-1 w-full">
+                    <Link href={`/reservar?roomId=${rooms[currentIndex].id}`} className="flex-1 w-full">
                       <Button size="lg" className="w-full">
                         Reservar Ahora
                       </Button>

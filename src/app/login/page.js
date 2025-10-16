@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { signIn, getSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,8 +17,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
-
+  const returnUrl = searchParams.get('returnUrl')
+  
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
@@ -42,7 +44,18 @@ export default function LoginPage() {
           description: 'Bienvenido a Hotel Elefante',
         })
         
-        // Get session to check user role
+        // Set flag to prevent redirect loop
+        sessionStorage.setItem('justLoggedIn', 'true')
+        sessionStorage.removeItem('hasRedirectedToLogin')
+        
+        // If there's a return URL, redirect there
+        if (returnUrl) {
+          // Use replace to avoid adding to browser history
+          router.replace(decodeURIComponent(returnUrl))
+          return
+        }
+        
+        // Otherwise, redirect based on user role
         const session = await getSession()
         if (session?.user?.role === 'ADMIN') {
           router.push('/admin/dashboard')

@@ -108,7 +108,7 @@ export default function HabitacionesPage() {
                       Ver Detalles
                     </Button>
                   </Link>
-                  <Link href="/reservar" className="flex-1">
+                  <Link href={`/reservar?roomId=${room.id}`} className="flex-1">
                     <Button className="w-full" disabled={room.available === 0}>
                       {room.available > 0 ? 'Reservar' : 'No disponible'}
                     </Button>

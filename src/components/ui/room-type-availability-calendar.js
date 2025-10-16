@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { Button } from './button'
 import { Card, CardContent, CardHeader, CardTitle } from './card'
@@ -13,15 +12,17 @@ const MONTHS = [
 
 const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
-export function AvailabilityCalendar({ roomId }) {
-  const router = useRouter()
+export function RoomTypeAvailabilityCalendar({ roomTypeId }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [availability, setAvailability] = useState({})
   const [isLoading, setIsLoading] = useState(false)
+  const [totalRooms, setTotalRooms] = useState(0)
 
   useEffect(() => {
-    fetchAvailability()
-  }, [currentDate, roomId])
+    if (roomTypeId) {
+      fetchAvailability()
+    }
+  }, [currentDate, roomTypeId])
 
   const fetchAvailability = async () => {
     try {
@@ -30,12 +31,13 @@ export function AvailabilityCalendar({ roomId }) {
       const month = currentDate.getMonth()
       
       const response = await fetch(
-        `/api/rooms/${roomId}/availability?year=${year}&month=${month}`
+        `/api/admin/room-types/${roomTypeId}/availability?year=${year}&month=${month}`
       )
       
       if (response.ok) {
         const data = await response.json()
         setAvailability(data.availability || {})
+        setTotalRooms(data.totalRooms || 0)
       }
     } catch (error) {
       console.error('Error al cargar disponibilidad:', error)
@@ -104,7 +106,7 @@ export function AvailabilityCalendar({ roomId }) {
   const getDayClassName = (dayInfo) => {
     if (!dayInfo) return 'invisible'
     
-    const baseClasses = 'aspect-square flex flex-col items-center justify-center rounded-lg p-2 text-sm relative transition-all'
+    const baseClasses = 'aspect-square flex flex-col items-center justify-center rounded-lg p-2 text-sm relative'
     
     if (dayInfo.isPast) {
       return `${baseClasses} bg-gray-100 text-gray-400 cursor-not-allowed`
@@ -114,34 +116,35 @@ export function AvailabilityCalendar({ roomId }) {
       return `${baseClasses} bg-gray-50 text-gray-600`
     }
     
-    if (dayInfo.availability.available) {
-      return `${baseClasses} bg-green-100 text-green-800 font-medium border-2 border-green-300`
-    } else {
-      // Ocupado - clickeable para ver reserva
-      return `${baseClasses} bg-red-100 text-red-800 font-medium hover:bg-red-200 cursor-pointer border-2 border-red-300`
-    }
-  }
-
-  const handleDayClick = (dayInfo) => {
-    if (!dayInfo || dayInfo.isPast || !dayInfo.availability) return
+    const availableCount = dayInfo.availability.availableRooms || 0
     
-    // Si está ocupado y tiene reservationId, redirigir a la reserva
-    if (!dayInfo.availability.available && dayInfo.availability.reservationId) {
-      // Detectar si estamos en admin o operador
-      const currentPath = window.location.pathname
-      const basePath = currentPath.includes('/admin') ? '/admin' : '/operador'
-      router.push(`${basePath}/reservas?id=${dayInfo.availability.reservationId}`)
+    if (availableCount === 0) {
+      return `${baseClasses} bg-red-100 text-red-800 font-medium cursor-not-allowed border-2 border-red-300`
+    } else if (availableCount === totalRooms) {
+      return `${baseClasses} bg-green-100 text-green-800 font-medium hover:bg-green-200 cursor-pointer border-2 border-green-300`
+    } else {
+      return `${baseClasses} bg-yellow-100 text-yellow-800 font-medium hover:bg-yellow-200 cursor-pointer border-2 border-yellow-300`
     }
   }
 
   const days = getDaysInMonth()
+
+  if (!roomTypeId) {
+    return (
+      <Card className="w-full">
+        <CardContent className="p-6">
+          <p className="text-gray-500 text-center">Selecciona un tipo de habitación para ver su disponibilidad</p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">
-            Disponibilidad - {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
+            Disponibilidad por Tipo - {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
           </CardTitle>
           <div className="flex gap-2">
             <Button
@@ -162,6 +165,9 @@ export function AvailabilityCalendar({ roomId }) {
             </Button>
           </div>
         </div>
+        {totalRooms > 0 && (
+          <p className="text-sm text-gray-600">Total de habitaciones de este tipo: {totalRooms}</p>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -188,15 +194,21 @@ export function AvailabilityCalendar({ roomId }) {
                 <div
                   key={index}
                   className={getDayClassName(dayInfo)}
-                  onClick={() => handleDayClick(dayInfo)}
                   title={dayInfo?.availability ? 
-                    (dayInfo.availability.available ? 'Disponible' : 'Ocupado - Click para ver reserva') 
+                    `${dayInfo.availability.availableRooms}/${totalRooms} habitaciones disponibles` 
                     : ''}
                 >
                   {dayInfo && (
-                    <span className={dayInfo.isToday ? 'font-bold' : ''}>
-                      {dayInfo.day}
-                    </span>
+                    <>
+                      <span className={dayInfo.isToday ? 'font-bold' : ''}>
+                        {dayInfo.day}
+                      </span>
+                      {dayInfo.availability && !dayInfo.isPast && (
+                        <span className="text-[10px] mt-0.5">
+                          {dayInfo.availability.availableRooms}/{totalRooms}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
@@ -206,7 +218,11 @@ export function AvailabilityCalendar({ roomId }) {
             <div className="mt-6 flex flex-wrap gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></div>
-                <span className="text-gray-600">Disponible</span>
+                <span className="text-gray-600">Todas disponibles</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-300 rounded"></div>
+                <span className="text-gray-600">Parcialmente disponible</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-red-100 border-2 border-red-300 rounded"></div>

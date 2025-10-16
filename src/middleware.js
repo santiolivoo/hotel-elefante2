@@ -20,8 +20,8 @@ export default withAuth(
         }
         
         // Protected user routes
-        if (pathname.startsWith('/reservar') || 
-            pathname.startsWith('/mis-reservas') || 
+        // NOTE: /reservar handles its own auth redirects in the component
+        if (pathname.startsWith('/mis-reservas') || 
             pathname.startsWith('/perfil')) {
           return !!token
         }
@@ -36,7 +36,7 @@ export const config = {
   matcher: [
     '/admin/:path*',
     '/operador/:path*',
-    '/reservar',
+    // '/reservar' removed - handles its own auth
     '/mis-reservas',
     '/perfil'
   ]

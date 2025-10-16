@@ -8,7 +8,7 @@ import { Footer } from '@/components/layout/footer'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { AvailabilityCalendar } from '@/components/ui/availability-calendar'
+import { InteractiveAvailabilityCalendar } from '@/components/ui/interactive-availability-calendar'
 import { 
   Users, 
   ArrowLeft,
@@ -165,9 +165,9 @@ export default function HabitacionDetailPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
-                  <Link href="/reservar" className="flex-1">
-                    <Button size="lg" className="w-full" disabled={room.available === 0}>
-                      {room.available > 0 ? 'Reservar Ahora' : 'No disponible'}
+                  <Link href={`/reservar?roomId=${room.id}`} className="flex-1">
+                    <Button size="lg" className="w-full">
+                      Reservar Ahora
                     </Button>
                   </Link>
                   <Button 
@@ -223,7 +223,7 @@ export default function HabitacionDetailPage() {
           {/* Calendar Section */}
           {showCalendar && (
             <div className="mt-8">
-              <AvailabilityCalendar roomId={room.id} />
+              <InteractiveAvailabilityCalendar roomId={room.id} />
             </div>
           )}
 
