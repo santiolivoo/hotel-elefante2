@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -32,7 +32,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, calculateDays } from '@/lib/utils'
 
-export default function ReservarPage() {
+function ReservarContent() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -409,7 +409,7 @@ export default function ReservarPage() {
   const filteredRooms = applyFiltersAndSort(showResults ? searchResults : [])
 
   return (
-    <div className="min-h-screen">
+    <>
       <Header />
       
       <main className="py-8">
@@ -807,6 +807,23 @@ export default function ReservarPage() {
       </main>
 
       <Footer />
+    </>
+  )
+}
+
+export default function ReservarPage() {
+  return (
+    <div className="min-h-screen">
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+            <p className="text-gray-600">Cargando...</p>
+          </div>
+        </div>
+      }>
+        <ReservarContent />
+      </Suspense>
     </div>
   )
 }
