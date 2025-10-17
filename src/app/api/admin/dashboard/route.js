@@ -89,6 +89,7 @@ export async function GET(request) {
           select: {
             roomType: {
               select: {
+                id: true,
                 name: true
               }
             }
@@ -171,6 +172,7 @@ export async function GET(request) {
       const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
       monthlyRevenue.push({
         month: monthNames[monthIndex],
+        monthNumber: monthIndex + 1, // 1-12 para construir fechas
         revenue: Math.round(revenue),
         reservations: monthReservations.length
       })
@@ -180,29 +182,41 @@ export async function GET(request) {
     // Obtener todos los tipos de habitación
     const allRoomTypes = await prisma.roomType.findMany({
       select: {
+        id: true,
         name: true
       }
     })
 
-    // Inicializar distribución con todos los tipos
+    // Inicializar distribución con todos los tipos usando ID como clave
     const roomTypeDistribution = {}
     allRoomTypes.forEach(type => {
-      roomTypeDistribution[type.name] = 0
-    })
-
-    // Contar reservas por tipo
-    reservationsForCalc.forEach(res => {
-      const typeName = res.room.roomType.name
-      if (roomTypeDistribution[typeName] !== undefined) {
-        roomTypeDistribution[typeName]++
+      roomTypeDistribution[type.id] = {
+        name: type.name,
+        count: 0,
+        roomTypeId: type.id
       }
     })
 
-    // Convertir a array
-    const roomTypeData = Object.entries(roomTypeDistribution).map(([name, value]) => ({
-      name,
-      value
-    }))
+    // Contar reservas por tipo usando el ID
+    reservationsForCalc.forEach((res) => {
+      const typeId = res.room?.roomType?.id
+      if (typeId && roomTypeDistribution[typeId] !== undefined) {
+        roomTypeDistribution[typeId].count++
+      }
+    })
+
+    // Convertir a array y ordenar por ID para mantener consistencia
+    const roomTypeData = Object.keys(roomTypeDistribution)
+      .map(id => {
+        const data = roomTypeDistribution[id]
+        return {
+          name: data.name,
+          value: data.count,
+          roomTypeId: data.roomTypeId
+        }
+      })
+      .sort((a, b) => a.roomTypeId - b.roomTypeId) // Ordenar por ID
+      .filter(item => item.value > 0) // Solo mostrar tipos con reservas
 
     return NextResponse.json({
       stats: {

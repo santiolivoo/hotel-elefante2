@@ -19,6 +19,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const roomId = searchParams.get('roomId')
+    const roomTypeId = searchParams.get('roomTypeId')
     const userId = searchParams.get('userId')
     const search = searchParams.get('search')
     const dateRange = searchParams.get('dateRange')
@@ -30,6 +31,7 @@ export async function GET(request) {
     const skip = (page - 1) * limit
 
     let whereClause = {}
+    let andConditions = []
 
     // Si hay un ID de reserva específico, solo devolver esa reserva
     if (reservationId) {
@@ -46,6 +48,13 @@ export async function GET(request) {
       whereClause.roomId = parseInt(roomId)
     }
 
+    // Filtro de tipo de habitación
+    if (roomTypeId) {
+      whereClause.room = {
+        roomTypeId: parseInt(roomTypeId)
+      }
+    }
+
     // Filtro de usuario
     if (userId) {
       whereClause.userId = userId
@@ -53,12 +62,14 @@ export async function GET(request) {
 
     // Filtro de búsqueda por texto
     if (search) {
-      whereClause.OR = [
-        { id: { contains: search, mode: 'insensitive' } },
-        { user: { name: { contains: search, mode: 'insensitive' } } },
-        { user: { email: { contains: search, mode: 'insensitive' } } },
-        { room: { number: { contains: search } } }
-      ]
+      andConditions.push({
+        OR: [
+          { id: { contains: search, mode: 'insensitive' } },
+          { user: { name: { contains: search, mode: 'insensitive' } } },
+          { user: { email: { contains: search, mode: 'insensitive' } } },
+          { room: { number: { contains: search } } }
+        ]
+      })
     }
 
     // Filtro de rango de fechas
@@ -88,24 +99,43 @@ export async function GET(request) {
         lt: tomorrow
       }
     } else if (dateRange === 'custom' && customDateFrom && customDateTo) {
-      // Filtro personalizado de fechas
-      const dateFrom = new Date(customDateFrom)
-      dateFrom.setHours(0, 0, 0, 0)
-      const dateTo = new Date(customDateTo)
+      // Filtro personalizado de fechas - CORREGIR TIMEZONE
+      // Parsear fechas y agregar timezone offset manualmente para evitar UTC
+      const parseLocalDate = (dateStr) => {
+        const [year, month, day] = dateStr.split('-').map(Number)
+        const date = new Date(year, month - 1, day)
+        // Ajustar al inicio del día en hora local
+        date.setHours(0, 0, 0, 0)
+        return date
+      }
+      
+      const dateFrom = parseLocalDate(customDateFrom)
+      const dateTo = parseLocalDate(customDateTo)
+      // Ajustar al final del día para dateTo
       dateTo.setHours(23, 59, 59, 999)
       
       whereClause.checkIn = {
         gte: dateFrom,
         lte: dateTo
       }
+      // NO aplicar filtro por defecto cuando hay filtro custom
     } else if (dateRange === 'all' || !dateRange) {
-      // Por defecto, mostrar solo:
-      // 1. Reservas pendientes de pago (sin importar fecha)
-      // 2. Reservas próximas (checkIn >= hoy)
-      whereClause.OR = [
-        { status: 'PENDING_PAYMENT' },
-        { checkIn: { gte: today } }
-      ]
+      // Por defecto, mostrar solo reservas relevantes si NO hay filtro de status específico
+      // Si el usuario filtró por un status específico, no aplicar el filtro por defecto
+      if (!status || status === 'ALL') {
+        andConditions.push({
+          OR: [
+            { status: 'PENDING_PAYMENT' },
+            { checkIn: { gte: today } }
+          ]
+        })
+      }
+      // Si hay un status específico, dejar que ese filtro funcione solo
+    }
+
+    // Combinar todas las condiciones AND
+    if (andConditions.length > 0) {
+      whereClause.AND = andConditions
     }
 
     // Obtener total count para paginación
@@ -114,6 +144,8 @@ export async function GET(request) {
     })
 
     // Calcular stats globales (independientes de paginación y filtros)
+    // Total de TODAS las reservas en la base de datos
+    const totalReservationsGlobal = await prisma.reservation.count()
 
     const [checkInsToday, checkOutsToday, pendingPayments, activeReservations] = await Promise.all([
       // Check-ins hoy
@@ -182,15 +214,21 @@ export async function GET(request) {
       take: limit
     })
     
-    // Reordenar para poner PENDING_PAYMENT primero
-    const sortedReservations = reservations.sort((a, b) => {
-      // Primero por estado: PENDING_PAYMENT antes que otros
-      if (a.status === 'PENDING_PAYMENT' && b.status !== 'PENDING_PAYMENT') return -1
-      if (a.status !== 'PENDING_PAYMENT' && b.status === 'PENDING_PAYMENT') return 1
-      
-      // Luego por fecha de checkIn (más cercana primero)
-      return new Date(a.checkIn) - new Date(b.checkIn)
-    })
+    // Reordenar solo si NO hay filtro de status específico
+    // Si hay filtro de status, mantener el orden por checkIn ascendente
+    const sortedReservations = (!status || status === 'ALL') 
+      ? reservations.sort((a, b) => {
+          // Primero por estado: PENDING_PAYMENT antes que otros
+          if (a.status === 'PENDING_PAYMENT' && b.status !== 'PENDING_PAYMENT') return -1
+          if (a.status !== 'PENDING_PAYMENT' && b.status === 'PENDING_PAYMENT') return 1
+          
+          // Luego por fecha de checkIn (más cercana primero)
+          return new Date(a.checkIn) - new Date(b.checkIn)
+        })
+      : reservations.sort((a, b) => {
+          // Solo ordenar por checkIn ascendente (cronológico)
+          return new Date(a.checkIn) - new Date(b.checkIn)
+        })
 
     return NextResponse.json({ 
       reservations: sortedReservations,
@@ -205,7 +243,8 @@ export async function GET(request) {
         checkOutsToday,
         pendingPayments,
         activeReservations,
-        totalReservations: totalCount
+        totalReservations: totalReservationsGlobal, // Total global de todas las reservas
+        filteredReservations: totalCount // Total de reservas con los filtros aplicados
       }
     })
 

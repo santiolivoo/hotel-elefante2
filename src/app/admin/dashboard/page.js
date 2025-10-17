@@ -100,6 +100,7 @@ export default function AdminDashboardPage() {
 
   const { stats, revenueData, roomTypeData, recentReservations } = dashboardData
 
+
   return (
     <div className="space-y-6">
       {/* Header con Filtros */}
@@ -131,7 +132,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => router.push('/admin/reservas')}
+          onClick={() => router.push('/admin/reservas?dateRange=current')}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -143,7 +144,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="mt-2">
               <span className="text-xs text-gray-500">
-                Actualmente en el hotel
+                Click para ver - Actualmente en el hotel
               </span>
             </div>
           </CardContent>
@@ -151,7 +152,7 @@ export default function AdminDashboardPage() {
 
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => router.push('/admin/reservas')}
+          onClick={() => router.push('/admin/reservas?dateRange=today')}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -163,7 +164,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="mt-2">
               <span className="text-xs text-gray-500">
-                Llegadas programadas
+                Click para ver - Llegadas de hoy
               </span>
             </div>
           </CardContent>
@@ -171,7 +172,7 @@ export default function AdminDashboardPage() {
 
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => router.push('/admin/reservas')}
+          onClick={() => router.push('/admin/reservas?dateRange=checkouts_today')}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -183,7 +184,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="mt-2">
               <span className="text-xs text-gray-500">
-                Salidas programadas
+                Click para ver - Salidas de hoy
               </span>
             </div>
           </CardContent>
@@ -191,7 +192,7 @@ export default function AdminDashboardPage() {
 
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => router.push('/admin/reservas')}
+          onClick={() => router.push('/admin/reservas?status=PENDING_PAYMENT')}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -203,7 +204,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="mt-2">
               <span className="text-xs text-gray-500">
-                Requieren atención
+                Click para ver - Requieren atención
               </span>
             </div>
           </CardContent>
@@ -234,7 +235,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => router.push('/admin/reservas')}
+          onClick={() => router.push(`/admin/reservas?dateRange=custom&customDateFrom=${selectedYear}-01-01&customDateTo=${selectedYear}-12-31`)}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -246,7 +247,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="mt-2">
               <span className="text-xs text-gray-500">
-                Check-in en {selectedYear}
+                Click para ver - Check-in en {selectedYear}
               </span>
             </div>
           </CardContent>
@@ -254,7 +255,7 @@ export default function AdminDashboardPage() {
 
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => router.push('/admin/reservas')}
+          onClick={() => router.push(`/admin/reservas?dateRange=custom&customDateFrom=${selectedYear}-01-01&customDateTo=${selectedYear}-12-31`)}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -266,15 +267,13 @@ export default function AdminDashboardPage() {
             </div>
             <div className="mt-2">
               <span className="text-xs text-gray-500">
-                Check-in en {selectedYear}
+                Click para ver - Check-in en {selectedYear}
               </span>
             </div>
           </CardContent>
         </Card>
 
         <Card 
-          className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => router.push('/admin/habitaciones')}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -303,13 +302,28 @@ export default function AdminDashboardPage() {
           <CardContent>
             {revenueData && revenueData.length > 0 && revenueData.some(d => d.revenue > 0) ? (
               <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={revenueData}>
+                <BarChart 
+                  data={revenueData}
+                  onClick={(data) => {
+                    if (data && data.activePayload && data.activePayload[0]) {
+                      const clickedData = data.activePayload[0].payload
+                      if (clickedData && clickedData.monthNumber) {
+                        const monthStr = String(clickedData.monthNumber).padStart(2, '0')
+                        const fromDate = `${selectedYear}-${monthStr}-01`
+                        const lastDay = new Date(selectedYear, clickedData.monthNumber, 0).getDate()
+                        const toDate = `${selectedYear}-${monthStr}-${String(lastDay).padStart(2, '0')}`
+                        router.push(`/admin/reservas?dateRange=custom&customDateFrom=${fromDate}&customDateTo=${toDate}`)
+                      }
+                    }
+                  }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="month" />
                   <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
                   <Tooltip 
                     formatter={(value) => [formatCurrency(value), 'Ingresos']}
                     labelFormatter={(label) => `Mes: ${label}`}
+                    cursor={{ fill: 'rgba(212, 197, 109, 0.2)' }}
                   />
                   <Bar 
                     dataKey="revenue" 
@@ -350,7 +364,10 @@ export default function AdminDashboardPage() {
                     dataKey="value"
                   >
                     {roomTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={COLORS[index % COLORS.length]}
+                      />
                     ))}
                   </Pie>
                   <Tooltip formatter={(value, name) => [`${value} reservas`, name]} />

@@ -19,6 +19,12 @@ export function useReservations(filters = {}, page = 1) {
       if (filters.status && filters.status !== 'ALL') {
         params.append('status', filters.status)
       }
+      if (filters.roomId && filters.roomId !== 'ALL') {
+        params.append('roomId', filters.roomId)
+      }
+      if (filters.roomTypeId && filters.roomTypeId !== 'ALL') {
+        params.append('roomTypeId', filters.roomTypeId)
+      }
       
       if (filters.dateRange && filters.dateRange !== 'all') {
         params.append('dateRange', filters.dateRange)

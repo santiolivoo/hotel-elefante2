@@ -59,16 +59,26 @@ function OperadorReservasContent() {
   const [highlightedId, setHighlightedId] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const reservationRefs = useRef({})
+  const [rooms, setRooms] = useState([])
+  const [roomTypes, setRoomTypes] = useState([])
   const [searchInput, setSearchInput] = useState('')
   const [pendingFilters, setPendingFilters] = useState({
     search: '',
     status: 'ALL',
-    dateRange: 'all'
+    dateRange: 'all',
+    roomId: 'ALL',
+    roomTypeId: 'ALL',
+    customDateFrom: '',
+    customDateTo: ''
   })
   const [filters, setFilters] = useState({
     search: '',
     status: 'ALL',
-    dateRange: 'all'
+    dateRange: 'all',
+    roomId: 'ALL',
+    roomTypeId: 'ALL',
+    customDateFrom: '',
+    customDateTo: ''
   })
   const { toast } = useToast()
   const router = useRouter()
@@ -95,16 +105,47 @@ function OperadorReservasContent() {
     totalReservations: 0
   }
 
+  // Cargar habitaciones y tipos
+  useEffect(() => {
+    const fetchRoomsAndTypes = async () => {
+      try {
+        const [roomsRes, typesRes] = await Promise.all([
+          fetch('/api/admin/rooms'),
+          fetch('/api/admin/room-types')
+        ])
+        if (roomsRes.ok) {
+          const roomsData = await roomsRes.json()
+          setRooms(roomsData.rooms || [])
+        }
+        if (typesRes.ok) {
+          const typesData = await typesRes.json()
+          setRoomTypes(typesData.roomTypes || [])
+        }
+      } catch (error) {
+        console.error('Error loading rooms/types:', error)
+      }
+    }
+    fetchRoomsAndTypes()
+  }, [])
+
   useEffect(() => {
     const statusParam = searchParams.get('status')
     const dateRangeParam = searchParams.get('dateRange')
+    const roomTypeIdParam = searchParams.get('roomTypeId')
+    const roomIdParam = searchParams.get('roomId')
+    const customDateFromParam = searchParams.get('customDateFrom')
+    const customDateToParam = searchParams.get('customDateTo')
     const reservationId = searchParams.get('id')
     
-    if (statusParam || dateRangeParam) {
+    if (statusParam || dateRangeParam || roomTypeIdParam || roomIdParam || customDateFromParam || customDateToParam) {
       const newFilters = {
         ...filters,
         status: statusParam || 'ALL',
-        dateRange: dateRangeParam || 'all'
+        dateRange: dateRangeParam || 'all',
+        roomTypeId: roomTypeIdParam || 'ALL',
+        roomId: roomIdParam || 'ALL',
+        customDateFrom: customDateFromParam || '',
+        customDateTo: customDateToParam || ''
       }
       setFilters(newFilters)
       setPendingFilters(newFilters)
@@ -153,7 +194,11 @@ function OperadorReservasContent() {
     const clearedFilters = {
       search: '',
       status: 'ALL',
-      dateRange: 'all'
+      dateRange: 'all',
+      roomId: 'ALL',
+      roomTypeId: 'ALL',
+      customDateFrom: '',
+      customDateTo: ''
     }
     setFilters(clearedFilters)
     setPendingFilters(clearedFilters)
@@ -332,6 +377,40 @@ function OperadorReservasContent() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <Label htmlFor="roomType">Tipo de Habitación</Label>
+              <Select value={pendingFilters.roomTypeId} onValueChange={(value) => setPendingFilters(prev => ({ ...prev, roomTypeId: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos los tipos</SelectItem>
+                  {roomTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="room">Número de Habitación</Label>
+              <Select value={pendingFilters.roomId} onValueChange={(value) => setPendingFilters(prev => ({ ...prev, roomId: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas las habitaciones" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todas las habitaciones</SelectItem>
+                  {rooms.sort((a, b) => a.number.localeCompare(b.number)).map(room => (
+                    <SelectItem key={room.id} value={room.id.toString()}>
+                      {room.number} - {room.roomType?.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           {/* Filtro de fechas personalizado */}
@@ -343,7 +422,20 @@ function OperadorReservasContent() {
                   id="customDateFrom"
                   type="date"
                   value={pendingFilters.customDateFrom}
-                  onChange={(e) => setPendingFilters(prev => ({ ...prev, customDateFrom: e.target.value }))}
+                  onChange={(e) => {
+                    const newFromDate = e.target.value
+                    setPendingFilters(prev => {
+                      const updates = { customDateFrom: newFromDate }
+                      // Si "hasta" está vacío o es anterior a "desde", ajustarlo automáticamente
+                      if (!prev.customDateTo || new Date(prev.customDateTo) < new Date(newFromDate)) {
+                        // Establecer "hasta" 7 días después de "desde" por defecto
+                        const toDate = new Date(newFromDate)
+                        toDate.setDate(toDate.getDate() + 7)
+                        updates.customDateTo = toDate.toISOString().split('T')[0]
+                      }
+                      return { ...prev, ...updates }
+                    })
+                  }}
                 />
               </div>
               <div>
@@ -352,6 +444,7 @@ function OperadorReservasContent() {
                   id="customDateTo"
                   type="date"
                   value={pendingFilters.customDateTo}
+                  min={pendingFilters.customDateFrom} // No permitir fechas anteriores a "desde"
                   onChange={(e) => setPendingFilters(prev => ({ ...prev, customDateTo: e.target.value }))}
                 />
               </div>
