@@ -105,7 +105,7 @@ export default function AdminLayout({ children }) {
               </ul>
             </nav>
             <div className="p-4 border-t space-y-2">
-              <Link href="/operador/mapa" className="w-full" onClick={() => setSidebarOpen(false)}>
+              <Link href="/operador/habitaciones" className="w-full" onClick={() => setSidebarOpen(false)}>
                 <Button variant="outline" size="sm" className="w-full justify-start">
                   <Eye className="mr-2 h-4 w-4" />
                   Vista Operador
@@ -171,7 +171,7 @@ export default function AdminLayout({ children }) {
               </div>
               
               <div className="space-y-2">
-                <Link href="/operador/mapa" className="w-full">
+                <Link href="/operador/habitaciones" className="w-full">
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <Eye className="mr-2 h-4 w-4" />
                     Vista Operador

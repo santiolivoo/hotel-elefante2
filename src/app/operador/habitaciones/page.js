@@ -30,6 +30,12 @@ export default function OperadorHabitacionesPage() {
   const [rooms, setRooms] = useState([])
   const [roomTypes, setRoomTypes] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [pendingFilters, setPendingFilters] = useState({
+    search: '',
+    status: 'all',
+    roomType: 'all',
+    floor: 'all'
+  })
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -147,6 +153,23 @@ export default function OperadorHabitacionesPage() {
     }
   }
 
+  // Aplicar filtros
+  const applyFilters = () => {
+    setFilters({ ...pendingFilters })
+  }
+
+  // Limpiar filtros
+  const clearFilters = () => {
+    const clearedFilters = {
+      search: '',
+      status: 'all',
+      roomType: 'all',
+      floor: 'all'
+    }
+    setFilters(clearedFilters)
+    setPendingFilters(clearedFilters)
+  }
+
   const filteredRooms = rooms.filter(room => {
     return (
       (!filters.search || room.number.includes(filters.search) || room.description.toLowerCase().includes(filters.search.toLowerCase())) &&
@@ -246,8 +269,8 @@ export default function OperadorHabitacionesPage() {
                 <Input
                   id="search"
                   placeholder="Número, descripción..."
-                  value={filters.search}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  value={pendingFilters.search}
+                  onChange={(e) => setPendingFilters(prev => ({ ...prev, search: e.target.value }))}
                   className="pl-10"
                 />
               </div>
@@ -255,7 +278,7 @@ export default function OperadorHabitacionesPage() {
 
             <div>
               <Label htmlFor="status">Estado</Label>
-              <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+              <Select value={pendingFilters.status} onValueChange={(value) => setPendingFilters(prev => ({ ...prev, status: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -270,7 +293,7 @@ export default function OperadorHabitacionesPage() {
 
             <div>
               <Label htmlFor="roomType">Tipo</Label>
-              <Select value={filters.roomType} onValueChange={(value) => setFilters(prev => ({ ...prev, roomType: value }))}>
+              <Select value={pendingFilters.roomType} onValueChange={(value) => setPendingFilters(prev => ({ ...prev, roomType: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -285,7 +308,7 @@ export default function OperadorHabitacionesPage() {
 
             <div>
               <Label htmlFor="floor">Piso</Label>
-              <Select value={filters.floor} onValueChange={(value) => setFilters(prev => ({ ...prev, floor: value }))}>
+              <Select value={pendingFilters.floor} onValueChange={(value) => setPendingFilters(prev => ({ ...prev, floor: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -297,6 +320,24 @@ export default function OperadorHabitacionesPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          
+          {/* Botones de acción */}
+          <div className="flex gap-2 justify-end mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={clearFilters}
+            >
+              Limpiar
+            </Button>
+            <Button
+              type="button"
+              onClick={applyFilters}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Aplicar Filtros
+            </Button>
           </div>
         </CardContent>
       </Card>

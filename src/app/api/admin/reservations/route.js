@@ -22,11 +22,19 @@ export async function GET(request) {
     const userId = searchParams.get('userId')
     const search = searchParams.get('search')
     const dateRange = searchParams.get('dateRange')
+    const customDateFrom = searchParams.get('customDateFrom')
+    const customDateTo = searchParams.get('customDateTo')
+    const reservationId = searchParams.get('id') // Para filtrar por reserva específica
     const page = parseInt(searchParams.get('page')) || 1
     const limit = parseInt(searchParams.get('limit')) || 50
     const skip = (page - 1) * limit
 
     let whereClause = {}
+
+    // Si hay un ID de reserva específico, solo devolver esa reserva
+    if (reservationId) {
+      whereClause.id = reservationId
+    }
 
     // Filtro de estado
     if (status && status !== 'ALL') {
@@ -79,6 +87,25 @@ export async function GET(request) {
         gte: today,
         lt: tomorrow
       }
+    } else if (dateRange === 'custom' && customDateFrom && customDateTo) {
+      // Filtro personalizado de fechas
+      const dateFrom = new Date(customDateFrom)
+      dateFrom.setHours(0, 0, 0, 0)
+      const dateTo = new Date(customDateTo)
+      dateTo.setHours(23, 59, 59, 999)
+      
+      whereClause.checkIn = {
+        gte: dateFrom,
+        lte: dateTo
+      }
+    } else if (dateRange === 'all' || !dateRange) {
+      // Por defecto, mostrar solo:
+      // 1. Reservas pendientes de pago (sin importar fecha)
+      // 2. Reservas próximas (checkIn >= hoy)
+      whereClause.OR = [
+        { status: 'PENDING_PAYMENT' },
+        { checkIn: { gte: today } }
+      ]
     }
 
     // Obtener total count para paginación
@@ -126,6 +153,7 @@ export async function GET(request) {
     ])
 
     // Obtener reservas paginadas
+    // Ordenar por: 1) Estado (PENDING_PAYMENT primero), 2) checkIn más cercano
     const reservations = await prisma.reservation.findMany({
       where: whereClause,
       include: {
@@ -142,15 +170,30 @@ export async function GET(request) {
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      },
+      orderBy: [
+        {
+          status: 'asc' // CANCELLED < COMPLETED < CONFIRMED < PENDING_PAYMENT (alfabético)
+        },
+        {
+          checkIn: 'asc' // Más cercano primero
+        }
+      ],
       skip,
       take: limit
     })
+    
+    // Reordenar para poner PENDING_PAYMENT primero
+    const sortedReservations = reservations.sort((a, b) => {
+      // Primero por estado: PENDING_PAYMENT antes que otros
+      if (a.status === 'PENDING_PAYMENT' && b.status !== 'PENDING_PAYMENT') return -1
+      if (a.status !== 'PENDING_PAYMENT' && b.status === 'PENDING_PAYMENT') return 1
+      
+      // Luego por fecha de checkIn (más cercana primero)
+      return new Date(a.checkIn) - new Date(b.checkIn)
+    })
 
     return NextResponse.json({ 
-      reservations,
+      reservations: sortedReservations,
       pagination: {
         total: totalCount,
         page,

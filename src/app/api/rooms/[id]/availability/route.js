@@ -57,11 +57,16 @@ export async function GET(request, { params }) {
       
       // Verificar si esta habitación tiene reserva para este día
       const reservation = reservations.find(res => {
+        // Convertir a fecha local sin zona horaria para comparar solo fechas
         const resCheckIn = new Date(res.checkIn)
         const resCheckOut = new Date(res.checkOut)
         
-        // Una habitación está ocupada si la fecha está entre checkIn y checkOut
-        return currentDate >= resCheckIn && currentDate < resCheckOut
+        // Comparar usando strings de fecha YYYY-MM-DD para evitar problemas de zona horaria
+        const resCheckInStr = resCheckIn.toISOString().split('T')[0]
+        const resCheckOutStr = resCheckOut.toISOString().split('T')[0]
+        
+        // Una habitación está ocupada desde checkIn (inclusive) hasta checkOut (exclusive)
+        return dateStr >= resCheckInStr && dateStr < resCheckOutStr
       })
       
       availability[dateStr] = {

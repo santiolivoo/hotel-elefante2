@@ -101,13 +101,12 @@ export async function GET(request, { params }) {
         const resCheckIn = new Date(reservation.checkIn)
         const resCheckOut = new Date(reservation.checkOut)
         
-        // Normalizar a medianoche
-        resCheckIn.setHours(0, 0, 0, 0)
-        resCheckOut.setHours(0, 0, 0, 0)
-        currentDate.setHours(0, 0, 0, 0)
+        // Comparar usando strings de fecha YYYY-MM-DD para evitar problemas de zona horaria
+        const resCheckInStr = resCheckIn.toISOString().split('T')[0]
+        const resCheckOutStr = resCheckOut.toISOString().split('T')[0]
         
-        // La habitación está ocupada si la fecha actual está entre check-in (inclusive) y check-out (exclusive)
-        if (currentDate >= resCheckIn && currentDate < resCheckOut) {
+        // La habitación está ocupada desde checkIn (inclusive) hasta checkOut (exclusive)
+        if (dateStr >= resCheckInStr && dateStr < resCheckOutStr) {
           occupiedRooms.add(reservation.roomId)
         }
       })

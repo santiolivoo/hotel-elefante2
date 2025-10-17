@@ -64,19 +64,15 @@ export async function GET(request) {
     
     const totalRevenue = parseFloat(revenueResult._sum.paidAmount || 0)
 
-    // Obtener todas las habitaciones
-    const rooms = await prisma.room.findMany({
-      include: {
-        roomType: true
-      }
-    })
+    // Obtener conteo de habitaciones (más rápido que cargar todas)
+    const totalRooms = await prisma.room.count()
 
-    // Obtener mensajes de contacto
-    const messages = await prisma.contactMessage.findMany({
-      orderBy: {
-        createdAt: 'desc'
+    // Obtener solo el conteo de mensajes pendientes (más rápido)
+    const pendingMessages = await prisma.contactMessage.count({
+      where: {
+        status: 'RECEIVED'
       }
-    }).catch(() => [])
+    }).catch(() => 0)
 
     // Obtener solo las reservas necesarias para cálculos detallados
     const reservationsForCalc = await prisma.reservation.findMany({
@@ -103,7 +99,6 @@ export async function GET(request) {
 
     // Calcular ocupación promedio del año seleccionado
     // Ocupación = (noches reservadas / noches disponibles) * 100
-    const totalRooms = rooms.length
     const daysInYear = 365 // Simplificado, podría usar año bisiesto
     const totalAvailableNights = totalRooms * daysInYear
     
@@ -118,9 +113,6 @@ export async function GET(request) {
     const occupancyRate = totalAvailableNights > 0 
       ? Math.round((totalReservedNights / totalAvailableNights) * 100) 
       : 0
-
-    // Mensajes pendientes
-    const pendingMessages = messages.filter(m => m.status === 'RECEIVED').length
 
     // Calcular stats diarias (independientes del año seleccionado)
     const today = new Date()
@@ -212,43 +204,6 @@ export async function GET(request) {
       value
     }))
 
-    // Obtener solo las 10 reservas más recientes (con relaciones)
-    const recentReservationsData = await prisma.reservation.findMany({
-      where: {
-        checkIn: { gte: startOfYear, lte: endOfYear }
-      },
-      include: {
-        room: {
-          include: {
-            roomType: true
-          }
-        },
-        user: {
-          select: {
-            name: true,
-            email: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 10
-    })
-
-    const recentReservations = recentReservationsData.map(r => ({
-      id: r.id,
-      guestName: r.user.name,
-      roomNumber: r.room.number,
-      roomType: r.room.roomType.name,
-      checkIn: r.checkIn,
-      checkOut: r.checkOut,
-      status: r.status,
-      totalAmount: parseFloat(r.totalAmount),
-      paidAmount: parseFloat(r.paidAmount),
-      createdAt: r.createdAt
-    }))
-
     return NextResponse.json({
       stats: {
         // Stats del año seleccionado
@@ -263,8 +218,7 @@ export async function GET(request) {
         pendingPayments
       },
       revenueData: monthlyRevenue,
-      roomTypeData,
-      recentReservations
+      roomTypeData
     })
 
   } catch (error) {

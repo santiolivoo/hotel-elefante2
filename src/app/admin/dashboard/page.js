@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useDashboard } from '@/hooks/useDashboard'
 import { 
   BarChart, 
   Bar, 
@@ -40,57 +41,33 @@ const COLORS = ['#D4C56D', '#748067', '#BBCEA8', '#667eea', '#764ba2']
 
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
-  const [dashboardData, setDashboardData] = useState(null)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
   // Generar lista de años (año actual - 2 hasta año actual + 2)
   const currentYear = new Date().getFullYear()
   const availableYears = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [selectedYear])
+  // Usar React Query para obtener datos del dashboard
+  const { data, isLoading, isError } = useDashboard(selectedYear)
 
-  const fetchDashboardData = async () => {
-    try {
-      const response = await fetch(`/api/admin/dashboard?year=${selectedYear}`)
-      
-      if (!response.ok) {
-        throw new Error('Error al cargar datos del dashboard')
-      }
-
-      const data = await response.json()
-      
-      setTimeout(() => {
-        setDashboardData({
-          stats: data.stats,
-          revenueData: data.revenueData || [],
-          roomTypeData: data.roomTypeData || [],
-          recentReservations: data.recentReservations || []
-        })
-        setIsLoading(false)
-      }, 500)
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-      // Set default empty data on error
-      setDashboardData({
-        stats: {
-          activeReservations: 0,
-          checkInsToday: 0,
-          checkOutsToday: 0,
-          pendingPayments: 0,
-          newMessages: 0,
-          totalReservations: 0,
-          totalRevenue: 0,
-          occupancyRate: 0
-        },
-        revenueData: [],
-        roomTypeData: [],
-        recentReservations: []
-      })
-      setIsLoading(false)
-    }
+  // Preparar datos con valores por defecto
+  const dashboardData = data ? {
+    stats: data.stats,
+    revenueData: data.revenueData || [],
+    roomTypeData: data.roomTypeData || [],
+  } : {
+    stats: {
+      activeReservations: 0,
+      checkInsToday: 0,
+      checkOutsToday: 0,
+      pendingPayments: 0,
+      newMessages: 0,
+      totalReservations: 0,
+      totalRevenue: 0,
+      occupancyRate: 0
+    },
+    revenueData: [],
+    roomTypeData: [],
   }
 
   if (isLoading) {

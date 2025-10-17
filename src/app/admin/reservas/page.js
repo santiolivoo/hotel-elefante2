@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense, useCallback, useRef } from 'react'
+import { useState, useEffect, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useReservations, useUpdateReservationStatus } from '@/hooks/useReservations'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -68,21 +69,17 @@ const formatDateRange = (dateFrom, dateTo) => {
 }
 
 function AdminReservasContent() {
-  const [reservations, setReservations] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
   const [selectedReservation, setSelectedReservation] = useState(null)
   const [highlightedId, setHighlightedId] = useState(null)
-  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 })
+  const [currentPage, setCurrentPage] = useState(1)
   const reservationRefs = useRef({})
-  const [globalStats, setGlobalStats] = useState({
-    checkInsToday: 0,
-    checkOutsToday: 0,
-    pendingPayments: 0,
-    activeReservations: 0,
-    totalReservations: 0
-  })
   
   const [searchInput, setSearchInput] = useState('')
+  const [pendingFilters, setPendingFilters] = useState({
+    search: '',
+    status: 'ALL',
+    dateRange: 'all'
+  })
   const [filters, setFilters] = useState({
     search: '',
     status: 'ALL',
@@ -92,6 +89,28 @@ function AdminReservasContent() {
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
+  
+  // Agregar ID de reserva desde URL si existe
+  const reservationIdFromUrl = searchParams.get('id')
+  const queryFilters = {
+    ...filters,
+    id: reservationIdFromUrl || undefined
+  }
+  
+  // Usar React Query para obtener reservas
+  const { data, isLoading, refetch } = useReservations(queryFilters, currentPage)
+  const updateStatusMutation = useUpdateReservationStatus()
+  
+  // Extraer datos de la query
+  const reservations = data?.reservations || []
+  const pagination = data?.pagination || { page: 1, limit: 50, total: 0, totalPages: 0 }
+  const globalStats = data?.stats || {
+    checkInsToday: 0,
+    checkOutsToday: 0,
+    pendingPayments: 0,
+    activeReservations: 0,
+    totalReservations: 0
+  }
 
   // Leer filtros y reserva específica de URL al cargar
   useEffect(() => {
@@ -100,11 +119,13 @@ function AdminReservasContent() {
     const reservationId = searchParams.get('id')
     
     if (statusParam || dateRangeParam) {
-      setFilters(prev => ({
-        ...prev,
+      const newFilters = {
+        ...filters,
         status: statusParam || 'ALL',
         dateRange: dateRangeParam || 'all'
-      }))
+      }
+      setFilters(newFilters)
+      setPendingFilters(newFilters)
     }
     
     if (reservationId) {
@@ -133,57 +154,33 @@ function AdminReservasContent() {
     }
   }, [highlightedId, reservations])
 
-  // Debounce para el search input
+  // Sync search input with pending filters
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setFilters(prev => ({ ...prev, search: searchInput }))
-    }, 500)
-    
-    return () => clearTimeout(timer)
+    setPendingFilters(prev => ({ ...prev, search: searchInput }))
   }, [searchInput])
 
-  const fetchReservations = useCallback(async (page = 1) => {
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '50'
-      })
-      
-      // Agregar filtros a los params
-      if (filters.search) params.append('search', filters.search)
-      if (filters.status && filters.status !== 'ALL') params.append('status', filters.status)
-      if (filters.dateRange && filters.dateRange !== 'all') params.append('dateRange', filters.dateRange)
-      
-      const response = await fetch(`/api/admin/reservations?${params}`)
-      const data = await response.json()
-      
-      if (response.ok) {
-        setReservations(data.reservations)
-        setPagination(data.pagination)
-        setGlobalStats(data.stats)
-      } else {
-        toast({
-          title: 'Error',
-          description: 'No se pudieron cargar las reservas',
-          variant: 'destructive',
-        })
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Ocurrió un error inesperado',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [filters, toast])
-
-  // Recargar cuando cambien los filtros (excepto searchInput)
+  // React Query se encarga automáticamente del fetch cuando cambian los filtros
+  // Solo resetear la página cuando cambien los filtros
   useEffect(() => {
-    fetchReservations(1)
-  }, [filters, fetchReservations])
+    setCurrentPage(1)
+  }, [filters])
+
+  // Aplicar filtros pendientes
+  const applyFilters = () => {
+    setFilters({ ...pendingFilters })
+  }
+
+  // Limpiar filtros
+  const clearFilters = () => {
+    const clearedFilters = {
+      search: '',
+      status: 'ALL',
+      dateRange: 'all'
+    }
+    setFilters(clearedFilters)
+    setPendingFilters(clearedFilters)
+    setSearchInput('')
+  }
 
   // Aplicar filtros desde las tarjetas
   const applyQuickFilter = (filterType) => {
@@ -211,38 +208,11 @@ function AdminReservasContent() {
     }
     
     setFilters(newFilters)
+    setPendingFilters(newFilters)
   }
 
-  const updateReservationStatus = async (reservationId, newStatus) => {
-    try {
-      const response = await fetch(`/api/admin/reservations/${reservationId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      if (response.ok) {
-        toast({
-          title: 'Estado actualizado',
-          description: 'El estado de la reserva ha sido actualizado',
-        })
-        fetchReservations()
-      } else {
-        toast({
-          title: 'Error',
-          description: 'No se pudo actualizar el estado',
-          variant: 'destructive',
-        })
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Ocurrió un error inesperado',
-        variant: 'destructive',
-      })
-    }
+  const updateReservationStatus = (reservationId, newStatus) => {
+    updateStatusMutation.mutate({ reservationId, newStatus })
   }
 
   // Las stats ahora vienen del servidor
@@ -373,7 +343,7 @@ function AdminReservasContent() {
 
                 <div>
                   <Label htmlFor="status">Estado</Label>
-                  <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+                  <Select value={pendingFilters.status} onValueChange={(value) => setPendingFilters(prev => ({ ...prev, status: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Todos los estados" />
                     </SelectTrigger>
@@ -389,7 +359,7 @@ function AdminReservasContent() {
 
                 <div>
                   <Label htmlFor="dateRange">Período</Label>
-                  <Select value={filters.dateRange} onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value }))}>
+                  <Select value={pendingFilters.dateRange} onValueChange={(value) => setPendingFilters(prev => ({ ...prev, dateRange: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -405,28 +375,46 @@ function AdminReservasContent() {
               </div>
 
               {/* Filtro de fechas personalizado */}
-              {filters.dateRange === 'custom' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <Label htmlFor="customDateFrom">Check-in desde</Label>
-                    <Input
-                      id="customDateFrom"
-                      type="date"
-                      value={filters.customDateFrom}
-                      onChange={(e) => setFilters(prev => ({ ...prev, customDateFrom: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="customDateTo">Check-in hasta</Label>
-                    <Input
-                      id="customDateTo"
-                      type="date"
-                      value={filters.customDateTo}
-                      onChange={(e) => setFilters(prev => ({ ...prev, customDateTo: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              )}
+          {pendingFilters.dateRange === 'custom' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label htmlFor="customDateFrom">Check-in desde</Label>
+                <Input
+                  id="customDateFrom"
+                  type="date"
+                  value={pendingFilters.customDateFrom}
+                  onChange={(e) => setPendingFilters(prev => ({ ...prev, customDateFrom: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="customDateTo">Check-in hasta</Label>
+                <Input
+                  id="customDateTo"
+                  type="date"
+                  value={pendingFilters.customDateTo}
+                  onChange={(e) => setPendingFilters(prev => ({ ...prev, customDateTo: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* Botones de acción */}
+          <div className="flex gap-2 justify-end mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={clearFilters}
+            >
+              Limpiar
+            </Button>
+            <Button
+              type="button"
+              onClick={applyFilters}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Aplicar Filtros
+            </Button>
+          </div>
           </div>
         </CardContent>
       </Card>
@@ -819,25 +807,25 @@ function AdminReservasContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => fetchReservations(pagination.page - 1)}
+                  onClick={() => setCurrentPage(pagination.page - 1)}
                   disabled={pagination.page === 1 || isLoading}
                   className="h-8"
                 >
-                  <ChevronLeft className="h-4 w-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Anterior</span>
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <div className="text-xs sm:text-sm text-gray-600 px-2">
-                  {pagination.page} / {pagination.totalPages}
-                </div>
+
+                <span className="text-sm text-gray-600">
+                  Página {pagination.page} de {pagination.totalPages}
+                </span>
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => fetchReservations(pagination.page + 1)}
+                  onClick={() => setCurrentPage(pagination.page + 1)}
                   disabled={pagination.page === pagination.totalPages || isLoading}
                   className="h-8"
                 >
-                  <span className="hidden sm:inline">Siguiente</span>
-                  <ChevronRight className="h-4 w-4 sm:ml-1" />
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>

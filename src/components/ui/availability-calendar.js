@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { Button } from './button'
 import { Card, CardContent, CardHeader, CardTitle } from './card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -101,6 +102,18 @@ export function AvailabilityCalendar({ roomId }) {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))
   }
 
+  const handleMonthChange = (month) => {
+    setCurrentDate(new Date(currentDate.getFullYear(), parseInt(month)))
+  }
+
+  const handleYearChange = (year) => {
+    setCurrentDate(new Date(parseInt(year), currentDate.getMonth()))
+  }
+
+  // Generar array de años (año actual - 1 hasta año actual + 2)
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 4 }, (_, i) => currentYear - 1 + i)
+
   const getDayClassName = (dayInfo) => {
     if (!dayInfo) return 'invisible'
     
@@ -139,27 +152,53 @@ export function AvailabilityCalendar({ roomId }) {
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
-            Disponibilidad - {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </CardTitle>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={previousMonth}
-              disabled={isLoading}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={nextMonth}
-              disabled={isLoading}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+        <div className="flex flex-col gap-4">
+          <CardTitle className="text-lg">Disponibilidad</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex gap-2 flex-1">
+              <Select value={currentDate.getMonth().toString()} onValueChange={handleMonthChange} disabled={isLoading}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((month, index) => (
+                    <SelectItem key={index} value={index.toString()}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={currentDate.getFullYear().toString()} onValueChange={handleYearChange} disabled={isLoading}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={previousMonth}
+                disabled={isLoading}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={nextMonth}
+                disabled={isLoading}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
