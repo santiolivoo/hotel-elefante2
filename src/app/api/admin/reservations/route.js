@@ -119,19 +119,9 @@ export async function GET(request) {
         lte: dateTo
       }
       // NO aplicar filtro por defecto cuando hay filtro custom
-    } else if (dateRange === 'all' || !dateRange) {
-      // Por defecto, mostrar solo reservas relevantes si NO hay filtro de status específico
-      // Si el usuario filtró por un status específico, no aplicar el filtro por defecto
-      if (!status || status === 'ALL') {
-        andConditions.push({
-          OR: [
-            { status: 'PENDING_PAYMENT' },
-            { checkIn: { gte: today } }
-          ]
-        })
-      }
-      // Si hay un status específico, dejar que ese filtro funcione solo
     }
+    // Si dateRange === 'all', no aplicar ningún filtro de fecha
+    // Esto permite ver TODAS las reservas cuando se limpian los filtros
 
     // Combinar todas las condiciones AND
     if (andConditions.length > 0) {

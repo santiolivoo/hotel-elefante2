@@ -185,22 +185,9 @@ function LoginForm() {
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-300" />
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Cuentas de prueba</span>
-                </div>
               </div>
 
-              <div className="mt-4 space-y-2 text-xs text-gray-600">
-                <div className="p-2 bg-gray-50 rounded">
-                  <strong>Admin:</strong> admin@hotelelefante.com / admin123
-                </div>
-                <div className="p-2 bg-gray-50 rounded">
-                  <strong>Operador:</strong> operador@hotelelefante.com / operador123
-                </div>
-                <div className="p-2 bg-gray-50 rounded">
-                  <strong>Usuario:</strong> usuario@hotelelefante.com / usuario123
-                </div>
-              </div>
+            
             </div>
           </CardContent>
         </Card>
