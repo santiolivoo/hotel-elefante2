@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Deshabilitar caché para obtener siempre datos frescos
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request) {
   try {
     // Obtener todos los tipos de habitaciones con sus habitaciones
@@ -42,7 +46,14 @@ export async function GET(request) {
       }
     })
 
-    return NextResponse.json({ roomTypes: formattedRoomTypes })
+    return NextResponse.json(
+      { roomTypes: formattedRoomTypes },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        },
+      }
+    )
   } catch (error) {
     console.error('Error al obtener tipos de habitación:', error)
     return NextResponse.json(

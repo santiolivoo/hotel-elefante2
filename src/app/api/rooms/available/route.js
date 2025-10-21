@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET(request) {
   try {
@@ -115,12 +116,19 @@ export async function GET(request) {
       }
     }
 
-    return NextResponse.json({ 
-      roomTypes: availableRoomTypes,
-      checkIn,
-      checkOut,
-      guests
-    })
+    return NextResponse.json(
+      { 
+        roomTypes: availableRoomTypes,
+        checkIn,
+        checkOut,
+        guests
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        },
+      }
+    )
   } catch (error) {
     console.error('Error al obtener habitaciones disponibles:', error)
     return NextResponse.json(
