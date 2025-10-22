@@ -73,6 +73,7 @@ function ReservarContent() {
 
   // Pre-select room if roomId is in URL
   const hasPreselected = useRef(false)
+  const hasSearchedForPreselected = useRef(false)
   
   useEffect(() => {
     // Only proceed if user is authenticated and rooms are loaded
@@ -80,23 +81,34 @@ function ReservarContent() {
     
     // Only run once
     if (preselectedRoomId && !hasPreselected.current) {
-      // Try both string and number comparison for flexibility
-      const room = availableRooms.find(r => r.id === preselectedRoomId || r.id === parseInt(preselectedRoomId))
+      hasPreselected.current = true
       
-      if (room) {
-        hasPreselected.current = true
-        setSelectedRoom(room)
-        
-        // If dates are provided, move to step 3, otherwise stay on step 1
-        if (searchData.checkIn && searchData.checkOut) {
-          setCurrentStep(3)
-          setShowResults(true)
-        } else {
+      // If dates are provided, search for availability first to get correct room data
+      if (searchData.checkIn && searchData.checkOut && !hasSearchedForPreselected.current) {
+        hasSearchedForPreselected.current = true
+        handleSearch(null, true)
+      } else {
+        // No dates, just select from availableRooms
+        const room = availableRooms.find(r => r.id === preselectedRoomId || r.id === parseInt(preselectedRoomId))
+        if (room) {
+          setSelectedRoom(room)
           setCurrentStep(1)
         }
       }
     }
   }, [preselectedRoomId, availableRooms, status])
+  
+  // After search completes, select the room if coming from calendar
+  useEffect(() => {
+    if (preselectedRoomId && searchResults.length > 0 && !selectedRoom && hasSearchedForPreselected.current) {
+      const room = searchResults.find(r => r.id === preselectedRoomId || r.id === parseInt(preselectedRoomId))
+      if (room) {
+        setSelectedRoom(room)
+        setCurrentStep(3)
+        setShowResults(true)
+      }
+    }
+  }, [searchResults, preselectedRoomId, selectedRoom])
 
   // Redirect if not authenticated - using ref to prevent loops
   const isRedirecting = useRef(false)

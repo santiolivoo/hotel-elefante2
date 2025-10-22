@@ -103,9 +103,38 @@ const getReservationConfirmationTemplate = (reservation) => {
             </div>
           </div>
           
+          <div class="reservation-details">
+            <h3>💳 Información de Pago</h3>
+            <p>Para completar su reserva, realice la transferencia del monto total a la siguiente cuenta:</p>
+            <div class="detail-row">
+              <span><strong>Titular:</strong></span>
+              <span>Nicolas Mazzei</span>
+            </div>
+            <div class="detail-row">
+              <span><strong>CVU:</strong></span>
+              <span>0000003100034271948213</span>
+            </div>
+            <div class="detail-row">
+              <span><strong>Alias:</strong></span>
+              <span>NicolasMazzeiM14</span>
+            </div>
+            <div class="detail-row">
+              <span><strong>CUIT/CUIL:</strong></span>
+              <span>20460550972</span>
+            </div>
+            <div class="detail-row">
+              <span><strong>Entidad:</strong></span>
+              <span>Mercado Pago</span>
+            </div>
+            <p style="margin-top: 15px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+              <strong>📱 Importante:</strong> Una vez realizado el pago, por favor envíe el comprobante al WhatsApp del hotel:<br>
+              <strong style="font-size: 16px;">+54 9 3875850581</strong>
+            </p>
+          </div>
+          
           <p><strong>Información del Hotel:</strong></p>
           <p>📍 San Lorenzo, Salta, Argentina<br>
-          📞 +54 387 123-4567<br>
+          📞 +54 3875850581<br>
           ✉️ info@hotelelefante.com</p>
           
           <p><strong>Horarios:</strong></p>
@@ -175,7 +204,7 @@ const getContactReplyTemplate = (contactMessage, replyBody) => {
         
         <div class="footer">
           <p>Hotel Elefante - San Lorenzo, Salta, Argentina</p>
-          <p>📞 +54 387 123-4567 | ✉️ info@hotelelefante.com</p>
+          <p>📞 +54 3875850581 | ✉️ info@hotelelefante.com</p>
         </div>
       </div>
     </body>

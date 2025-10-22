@@ -73,10 +73,10 @@ export async function GET(request) {
     }
 
     // Filtro de rango de fechas
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    // Crear fechas en UTC para evitar problemas de zona horaria
+    const now = new Date()
+    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0))
+    const tomorrow = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0))
 
     if (dateRange === 'today') {
       whereClause.checkIn = {

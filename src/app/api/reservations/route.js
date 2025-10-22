@@ -28,10 +28,12 @@ export async function POST(request) {
     // Validate dates
     const checkInDate = new Date(checkIn)
     const checkOutDate = new Date(checkOut)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    
+    // Comparar fechas como strings para evitar problemas de zona horaria
+    const todayStr = new Date().toISOString().split('T')[0]
+    const checkInStr = checkIn.split('T')[0]
 
-    if (checkInDate < today) {
+    if (checkInStr < todayStr) {
       return NextResponse.json(
         { message: 'La fecha de check-in no puede ser anterior a hoy' },
         { status: 400 }

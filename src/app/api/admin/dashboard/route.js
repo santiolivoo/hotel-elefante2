@@ -116,10 +116,10 @@ export async function GET(request) {
       : 0
 
     // Calcular stats diarias (independientes del año seleccionado)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    // Crear fechas en UTC para evitar problemas de zona horaria
+    const now = new Date()
+    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0))
+    const tomorrow = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0))
 
     const [checkInsToday, checkOutsToday, activeReservations, pendingPayments] = await Promise.all([
       // Check-ins hoy
