@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import { 
@@ -41,6 +42,23 @@ export default function OperadorHabitacionesPage() {
     status: 'all',
     roomType: 'all',
     floor: 'all'
+  })
+  
+  // Estados para ocupación manual
+  const [occupyDialog, setOccupyDialog] = useState({
+    open: false,
+    roomId: null,
+    roomNumber: '',
+    roomTypePrice: 0
+  })
+  
+  const [occupyForm, setOccupyForm] = useState({
+    guestName: '',
+    guestEmail: '',
+    checkIn: new Date().toISOString().split('T')[0],
+    checkOut: '',
+    guests: 1,
+    totalAmount: 0
   })
   
   const [showCalendarForRoom, setShowCalendarForRoom] = useState(null)
@@ -124,6 +142,28 @@ export default function OperadorHabitacionesPage() {
   }
 
   const handleChangeStatus = async (roomId, newStatus) => {
+    // Si se marca como OCCUPIED, abrir dialog de ocupación manual
+    if (newStatus === 'OCCUPIED') {
+      const room = rooms.find(r => r.id === roomId)
+      const roomType = roomTypes.find(rt => rt.id === room.roomTypeId)
+      
+      setOccupyDialog({
+        open: true,
+        roomId: roomId,
+        roomNumber: room.number,
+        roomTypePrice: roomType?.basePrice || 0
+      })
+      
+      // Calcular monto sugerido (1 noche)
+      setOccupyForm(prev => ({
+        ...prev,
+        totalAmount: roomType?.basePrice || 0
+      }))
+      
+      return
+    }
+    
+    // Para otros status, cambiar directamente
     try {
       const response = await fetch(`/api/admin/rooms/${roomId}`, {
         method: 'PATCH',
@@ -149,6 +189,58 @@ export default function OperadorHabitacionesPage() {
         title: 'Error',
         description: error.message || 'No se pudo actualizar el estado',
         variant: 'destructive',
+      })
+    }
+  }
+  
+  const handleOccupyRoom = async () => {
+    // Validar formulario
+    if (!occupyForm.guestName || !occupyForm.guestEmail || !occupyForm.checkOut) {
+      toast({
+        title: 'Error',
+        description: 'Por favor completa todos los campos',
+        variant: 'destructive'
+      })
+      return
+    }
+    
+    try {
+      const response = await fetch(`/api/admin/rooms/${occupyDialog.roomId}/manual-reservation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(occupyForm)
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        toast({
+          title: 'Habitación ocupada',
+          description: `Reserva manual creada para ${occupyForm.guestName}`,
+        })
+        
+        // Cerrar dialog y limpiar formulario
+        setOccupyDialog({ open: false, roomId: null, roomNumber: '', roomTypePrice: 0 })
+        setOccupyForm({
+          guestName: '',
+          guestEmail: '',
+          checkIn: new Date().toISOString().split('T')[0],
+          checkOut: '',
+          guests: 1,
+          totalAmount: 0
+        })
+        
+        fetchData()
+      } else {
+        const data = await response.json()
+        throw new Error(data.error || 'Error al ocupar habitación')
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
       })
     }
   }
@@ -449,6 +541,113 @@ export default function OperadorHabitacionesPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog de Ocupación Manual */}
+      <Dialog open={occupyDialog.open} onOpenChange={(open) => setOccupyDialog({ ...occupyDialog, open })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ocupar Habitación #{occupyDialog.roomNumber}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="guestName">Nombre del Huésped *</Label>
+              <Input
+                id="guestName"
+                value={occupyForm.guestName}
+                onChange={(e) => setOccupyForm({ ...occupyForm, guestName: e.target.value })}
+                placeholder="Juan Pérez"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="guestEmail">Email *</Label>
+              <Input
+                id="guestEmail"
+                type="email"
+                value={occupyForm.guestEmail}
+                onChange={(e) => setOccupyForm({ ...occupyForm, guestEmail: e.target.value })}
+                placeholder="juan@ejemplo.com"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="checkIn">Check-in</Label>
+                <Input
+                  id="checkIn"
+                  type="date"
+                  value={occupyForm.checkIn}
+                  onChange={(e) => setOccupyForm({ ...occupyForm, checkIn: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="checkOut">Check-out *</Label>
+                <Input
+                  id="checkOut"
+                  type="date"
+                  value={occupyForm.checkOut}
+                  onChange={(e) => setOccupyForm({ ...occupyForm, checkOut: e.target.value })}
+                  min={occupyForm.checkIn}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="guests">Huéspedes</Label>
+                <Input
+                  id="guests"
+                  type="number"
+                  min="1"
+                  value={occupyForm.guests}
+                  onChange={(e) => setOccupyForm({ ...occupyForm, guests: parseInt(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="totalAmount">Monto Total</Label>
+                <Input
+                  id="totalAmount"
+                  type="number"
+                  min="0"
+                  value={occupyForm.totalAmount}
+                  onChange={(e) => setOccupyForm({ ...occupyForm, totalAmount: parseFloat(e.target.value) })}
+                  placeholder="150000"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-xs text-blue-800">
+                <strong>Nota:</strong> Se creará una reserva manual y la habitación se marcará como ocupada.
+                El monto sugerido es el precio base por noche del tipo de habitación.
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setOccupyDialog({ open: false, roomId: null, roomNumber: '', roomTypePrice: 0 })
+                  setOccupyForm({
+                    guestName: '',
+                    guestEmail: '',
+                    checkIn: new Date().toISOString().split('T')[0],
+                    checkOut: '',
+                    guests: 1,
+                    totalAmount: 0
+                  })
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleOccupyRoom}>
+                Confirmar Ocupación
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

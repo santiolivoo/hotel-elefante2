@@ -10,14 +10,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Users, Plus, UserPlus, Trash2, Loader2, Shield } from 'lucide-react'
+import { Users, Plus, UserPlus, Trash2, Loader2, Shield, Edit, Mail } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 
 export default function AdminOperadoresPage() {
   const [usuarios, setUsuarios] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [roleFilter, setRoleFilter] = useState('OPERATOR')
+  const [roleFilter, setRoleFilter] = useState('all')
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editingUser, setEditingUser] = useState(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'USER'
+  })
   const { toast } = useToast()
 
   useEffect(() => {
@@ -44,6 +53,160 @@ export default function AdminOperadoresPage() {
       })
       setIsLoading(false)
     }
+  }
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault()
+    
+    if (!formData.name || !formData.email || !formData.password) {
+      toast({
+        title: 'Error',
+        description: 'Todos los campos son requeridos',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Error al crear usuario')
+      }
+
+      const newUser = await response.json()
+      
+      toast({
+        title: 'Usuario creado',
+        description: `${newUser.name} ha sido creado exitosamente`,
+      })
+      
+      setShowCreateDialog(false)
+      setFormData({ name: '', email: '', password: '', role: 'USER' })
+      fetchUsuarios()
+    } catch (error) {
+      console.error('Error:', error)
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleEditUser = async (e) => {
+    e.preventDefault()
+    
+    if (!formData.name || !formData.email) {
+      toast({
+        title: 'Error',
+        description: 'Nombre y email son requeridos',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    try {
+      console.log('Editando usuario:', editingUser)
+      console.log('ID del usuario:', editingUser.id, 'Tipo:', typeof editingUser.id)
+      
+      const updateData = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role
+      }
+      
+      // Solo incluir password si se proporcionó uno nuevo
+      if (formData.password) {
+        updateData.password = formData.password
+      }
+
+      console.log('URL de fetch:', `/api/admin/users/${editingUser.id}`)
+      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Error al actualizar usuario')
+      }
+
+      const updatedUser = await response.json()
+      
+      toast({
+        title: 'Usuario actualizado',
+        description: `${updatedUser.name} ha sido actualizado exitosamente`,
+      })
+      
+      setShowEditDialog(false)
+      setEditingUser(null)
+      setFormData({ name: '', email: '', password: '', role: 'USER' })
+      fetchUsuarios()
+    } catch (error) {
+      console.error('Error:', error)
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleDeleteUser = async (user) => {
+    if (!confirm(`¿Estás seguro de eliminar al usuario ${user.name}?`)) {
+      return
+    }
+
+    try {
+      console.log('Eliminando usuario:', user)
+      console.log('ID del usuario:', user.id, 'Tipo:', typeof user.id)
+      console.log('URL de fetch:', `/api/admin/users/${user.id}`)
+      
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Error al eliminar usuario')
+      }
+      
+      toast({
+        title: 'Usuario eliminado',
+        description: `${user.name} ha sido eliminado exitosamente`,
+      })
+      
+      fetchUsuarios()
+    } catch (error) {
+      console.error('Error:', error)
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const openEditDialog = (user) => {
+    setEditingUser(user)
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: '', // No prellenar la contraseña
+      role: user.role
+    })
+    setShowEditDialog(true)
   }
 
   const handleChangeRole = async (userId, newRole) => {
@@ -116,9 +279,15 @@ export default function AdminOperadoresPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Operadores y Usuarios</h1>
-        <p className="text-gray-600">Gestiona los roles y permisos de usuarios del sistema</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Operadores y Usuarios</h1>
+          <p className="text-gray-600">Gestiona los roles y permisos de usuarios del sistema</p>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Crear Usuario
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -212,7 +381,7 @@ export default function AdminOperadoresPage() {
                 <TableHead>Email</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Fecha de Registro</TableHead>
-                <TableHead>Cambiar Rol</TableHead>
+                <TableHead className="text-center">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -244,19 +413,24 @@ export default function AdminOperadoresPage() {
                         }
                       </TableCell>
                       <TableCell>
-                        <Select 
-                          value={usuario.role} 
-                          onValueChange={(value) => handleChangeRole(usuario.id, value)}
-                        >
-                          <SelectTrigger className="w-40">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="USER">Usuario</SelectItem>
-                            <SelectItem value="OPERATOR">Operador</SelectItem>
-                            <SelectItem value="ADMIN">Administrador</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(usuario)}
+                            title="Editar usuario"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteUser(usuario)}
+                            title="Eliminar usuario"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -266,6 +440,142 @@ export default function AdminOperadoresPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Create User Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateUser} className="space-y-4">
+            <div>
+              <Label htmlFor="create-name">Nombre Completo *</Label>
+              <Input
+                id="create-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Juan Pérez"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="create-email">Email *</Label>
+              <Input
+                id="create-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="juan@ejemplo.com"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="create-password">Contraseña *</Label>
+              <Input
+                id="create-password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Mínimo 6 caracteres"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="create-role">Rol</Label>
+              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USER">Usuario</SelectItem>
+                  <SelectItem value="OPERATOR">Operador</SelectItem>
+                  <SelectItem value="ADMIN">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => {
+                setShowCreateDialog(false)
+                setFormData({ name: '', email: '', password: '', role: 'USER' })
+              }}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Crear Usuario
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Usuario</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditUser} className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">Nombre Completo *</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Juan Pérez"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-email">Email *</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="juan@ejemplo.com"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-password">Nueva Contraseña (opcional)</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Dejar vacío para no cambiar"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-role">Rol</Label>
+              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USER">Usuario</SelectItem>
+                  <SelectItem value="OPERATOR">Operador</SelectItem>
+                  <SelectItem value="ADMIN">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => {
+                setShowEditDialog(false)
+                setEditingUser(null)
+                setFormData({ name: '', email: '', password: '', role: 'USER' })
+              }}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                <Edit className="h-4 w-4 mr-2" />
+                Actualizar Usuario
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

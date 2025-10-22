@@ -152,7 +152,7 @@ export default function ContactoPage() {
                         type="tel"
                         value={formData.phone}
                         onChange={handleChange}
-                        placeholder="+54 387 123-4567"
+                        placeholder="+54 387 585-0581"
                       />
                     </div>
                     
@@ -221,8 +221,8 @@ export default function ContactoPage() {
                     <div>
                       <h4 className="font-semibold">Teléfono</h4>
                       <p className="text-gray-600 text-sm">
-                        +54 387 123-4567<br />
-                        WhatsApp: +54 9 387 123-4567
+                        +54 387 585-0581<br />
+                        WhatsApp: +54 9 387 585-0581
                       </p>
                     </div>
                   </div>
